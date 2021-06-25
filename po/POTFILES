@@ -1,0 +1,7 @@
+data/com.verynoisy.najork.desktop.in
+data/com.verynoisy.najork.appdata.xml.in
+data/com.verynoisy.najork.gschema.xml
+src/window.ui
+src/main.py
+src/window.py
+
