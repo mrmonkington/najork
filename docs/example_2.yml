@@ -1,0 +1,124 @@
+---
+# each layer can encode objects which have dependencies
+# on lower ranked layers only
+measure-duration: 2.0         # 2s = 1 bar at 120bpm (though we don't *do* bpm)
+layers:
+  - rank: 1                   # all static points should live here
+    children:
+      - entity: point
+        id: p1
+        coords: [1100, 200]
+      - entity: point
+        id: p2
+        coords: [1150, 500]
+      - entity: point
+        id: p3
+        coords: [700, 700]
+      - entity: point
+        id: p4
+        coords: [1400, 700]
+      - entity: point
+        id: p5
+        coords: [700, 1000]
+      - entity: point
+        id: p6
+        coords: [1400, 1000]
+      - entity: point           # for polyline
+        id: p7
+        coords: [650, 950]
+      - entity: point
+        id: p8
+        coords: [1400, 850]
+      - entity: point           # for circle origin
+        id: p9
+        coords: [300, 600]    # TL = [0,0]
+  - rank: 2
+    children:
+      - entity: circle
+        id: c1
+        origin: p0
+        radius: 250
+        orientation: 0        # rotation about origin, in order to define zero point for line
+        # rotation-speed: 0 - no let's implement as point progression            # rpm (not radians?)
+      - entity: circle
+        id: c2
+        origin: p0
+        radius: 150
+        orientation: 0
+      - entity: polyline        # could support beziers?!
+        id: pl1
+        start: p7
+        end: p8
+        midpoints:              # in coord space where p7-p8 is X-axis
+          - [0.1, -0.1]
+          - [0.2, 0.02]
+          - [0.3, -0.05]
+          - [0.4, 0.05]
+          - [0.55, -0.2]
+          - [0.7, 0.05]
+          - [0.8, -0.05]
+          - [0.9, 0.1]
+      - entity: line
+        id: l1
+        start: p3
+        end: p4
+      - entity: line
+        id: l2
+        start: p5
+        end: p6
+  - rank: 3
+    children:
+      - entity: dynpoint        # subclasses point
+        id: p10
+        parent: c2
+        coords:
+          - 0.9                   # x w.r.t to line as coordinate system (in this case circumferal)
+          - 0.0                   # y w.r.t to line (in this case radial offset, positive = outwards)
+        velocity: 0.1           # expressed in parent length (e.g. circumference) per measure (clockwise for circles)
+      - entity: dynpoint
+        id: p11
+        parent: l1
+        coords:
+          - 0.0
+          - 0.0
+        velocity: "1.0/8"       # can this be an expression?
+  - rank: 4
+    children:
+      - entity: circle
+        id: c3
+        origin: p10
+        radius: 100
+        default_child_velocity: -0.2    # let's calculate this for user based on parenting
+  - rank: 5
+    children:
+      - entity: dynpoint
+        id: p13
+        parent: c3
+        coords:
+          - 0.66
+          - 0.0                         # radial offset
+        velocity: inherit               # use parent's default_child_velocity
+      - entity: dynevent
+        id: e1
+        parent: c3
+        coords:
+          - 0.0
+          - 0.0
+        velocity: inherit
+        msg: "/filter/cutoff/{in_1*0.2}"
+  - rank: 6
+    children:
+  - rank: 7
+    children:
+      - entity: ports                     # msg sent at global clock rate (configure this?)
+        id: cutoff
+        inputs: 1
+        msg: "/filter/cutoff/{in_1*0.2}"  # can evaluate simple expressions using https://github.com/AxiaCore/py-expression-eval/
+        connections:
+          1: ang1
+      - entity: port
+        id: pitch
+        inputs: 1
+        msg: "/note/pitch/{in_1}"
+        connections:
+          1: dist1
