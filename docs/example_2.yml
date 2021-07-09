@@ -5,6 +5,9 @@ measure-duration: 2.0         # 2s = 1 bar at 120bpm (though we don't *do* bpm)
 layers:
   - rank: 1                   # all static points should live here
     children:
+      - entity: point           # for circle origin
+        id: p0
+        coords: [300, 600]    # TL = [0,0]
       - entity: point
         id: p1
         coords: [1100, 200]
@@ -29,26 +32,24 @@ layers:
       - entity: point
         id: p8
         coords: [1400, 850]
-      - entity: point           # for circle origin
-        id: p9
-        coords: [300, 600]    # TL = [0,0]
   - rank: 2
     children:
       - entity: circle
         id: c1
-        origin: p0
+        parent: p0            # origin - could we set this to another point?
         radius: 250
         orientation: 0        # rotation about origin, in order to define zero point for line
         # rotation-speed: 0 - no let's implement as point progression            # rpm (not radians?)
       - entity: circle
         id: c2
-        origin: p0
+        parent: p0
         radius: 150
         orientation: 0
       - entity: polyline        # could support beziers?!
         id: pl1
-        start: p7
-        end: p8
+        parents:
+          - p7
+          - p8
         midpoints:              # in coord space where p7-p8 is X-axis
           - [0.1, -0.1]
           - [0.2, 0.02]
@@ -60,12 +61,19 @@ layers:
           - [0.9, 0.1]
       - entity: line
         id: l1
-        start: p3
-        end: p4
+        parents:
+          - p3
+          - p4
       - entity: line
         id: l2
-        start: p5
-        end: p6
+        parents:
+          - p5
+          - p6
+      - entity: line
+        id: l3
+        parents:
+          - p1
+          - p2
   - rank: 3
     children:
       - entity: dynpoint        # subclasses point
@@ -82,13 +90,24 @@ layers:
           - 0.0
           - 0.0
         velocity: "1.0/8"       # can this be an expression?
+      - entity: dynpoint
+        id: p12
+        parent: l2
+        coords:
+          - 0.0
+          - 0.0
+        velocity: "1.0/8"       # can this be an expression?
   - rank: 4
     children:
-      - entity: circle
+      - entity: roller
         id: c3
-        origin: p10
-        radius: 100
-        default_child_velocity: -0.2    # let's calculate this for user based on parenting
+        parent: p10
+        rolling_surface: c1
+      - entity: line
+        id: l4
+        parents:
+          - p2
+          - p10
   - rank: 5
     children:
       - entity: dynpoint
@@ -104,20 +123,48 @@ layers:
         coords:
           - 0.0
           - 0.0
+        collides:
+          - c1
         velocity: inherit
-        msg: "/filter/cutoff/{in_1*0.2}"
+        msg: "/bip/A#3/50"
+        inputs: []
+      - entity: intersection
+        id: i1
+        parents:
+          - l2
+          - pl1
+      - entity: intersection
+        id: i2
+        parents:
+          - c1
+          - l4
   - rank: 6
     children:
+      - entity: distance
+        id: dist1
+        parents:
+          - p12
+          - i1
+      - entity: distance
+        id: dist2
+        parents:
+          - p2
+          - p10
+      - entity: angle
+        id: ang1
+        parents:                          # specified clockwise
+          - l4
+          - l3
   - rank: 7
     children:
-      - entity: ports                     # msg sent at global clock rate (configure this?)
-        id: cutoff
+      - entity: port                     # msg sent at global clock rate (configure this?)
+        id: port1
         inputs: 1
         msg: "/filter/cutoff/{in_1*0.2}"  # can evaluate simple expressions using https://github.com/AxiaCore/py-expression-eval/
         connections:
           1: ang1
       - entity: port
-        id: pitch
+        id: port2
         inputs: 1
         msg: "/note/pitch/{in_1}"
         connections:
