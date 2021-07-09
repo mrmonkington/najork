@@ -10,6 +10,12 @@ It takes its inspiration from the veritable [Iannix](https://www.iannix.org/) wi
 
 By parenting mechanisms and objects to each other all sorts of interesting relationships can be translated in music (listener enjoyment not guaranteed).
 
+## Interface
+
+It will eventually look something like this
+
+![image](https://user-images.githubusercontent.com/778856/125062911-cfc63b00-e0a6-11eb-9dfd-4f6fdbaa707f.png)
+
 ## Hacking
 
 This application currently runs in a Flatpak. Simply:
