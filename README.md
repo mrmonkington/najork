@@ -2,9 +2,9 @@
 
 Womble, muck and sneedball for your music.
 
-Najork is a geometric composition environment for music, and anything else that can consume OSC events.
+Najork is a geometric, kinetic composition environment for music, and anything else that can consume OSC events.
 
-It takes its inspiration from the veritable [Iannix](https://www.iannix.org/) with a focus on generated timings linked to geometric constructions.
+It takes its inspiration from the veritable [Iannix](https://www.iannix.org/) with a focus on generated timings linked to articulated constructions.
 
 By parenting mechanisms and objects to each other all sorts of interesting relationships can be translated in music (listener enjoyment not guaranteed).
 
