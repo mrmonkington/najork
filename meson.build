@@ -5,12 +5,13 @@ project('najork',
                    ],
 )
 
-#i18n = import('i18n')
+i18n = import('i18n')
 
 
 
-#subdir('data')
-subdir('src')
-#subdir('po')
+subdir('data')
+subdir('najork')
+subdir('po')
+subdir('bin')
 
 # meson.add_install_script('build-aux/meson/postinstall.py')
