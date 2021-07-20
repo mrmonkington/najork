@@ -12,6 +12,26 @@ finish-args:
   - "--socket=wayland"
   - "--device=dri"
 modules:
+  - name: libgeos
+    sources:
+      - type: archive
+        url: http://download.osgeo.org/geos/geos-3.9.1.tar.bz2
+        sha256: 7e630507dcac9dc07565d249a26f06a15c9f5b0c52dd29129a0e3d381d7e382a
+    buildsystem: cmake
+    builddir: true
+#    build-options:
+#      env:
+#        - "FLATPAK_BUILDER_N_JOBS=12"        # builder kills make if -j is too high!!
+    config-opts:
+      - "-DCMAKE_BUILD_TYPE=Release"
+      - "-DGEOS_ENABLE_TESTS=OFF"
+  - name: pip-install
+    buildsystem: simple
+    build-options:
+      build-args:
+        - "--share=network"
+    build-commands:
+      - "pip3 install shapely"
   - name: najork
     buildsystem: meson
     builddir: true

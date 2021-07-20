@@ -27,6 +27,12 @@ flatpak-builder ./build  com.verynoisy.najork.yml --force-clean
 flatpak-builder --run ./build com.verynoisy.najork.yml /app/bin/najork
 ```
 
-It's written in python using GTK4, python-osc and not much else.
+It's written in python using GTK4, Shapely, GEOS, python-osc and not much else.
 
 More to follow...
+
+## Requirements
+
+ - Python >=3.9
+ - libgeos-dev >= 3.3
+ 
