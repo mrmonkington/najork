@@ -31,6 +31,7 @@ class TemplatedOSCMessage(OSCMessage):
         return self._template.render(
             self._bindings(),
             math=math
+        )
 
 
 

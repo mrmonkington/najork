@@ -29,9 +29,9 @@ class Entity(ABC):
 
     def __init__(self, uid: str, rank: int):
         self._uid = uid
-        self._rank = _rank # probably not needed
+        self._rank = rank # probably not needed
 
-    @abstractmethod
+    # TODO: @abstractmethod
     def get_representation(self, t:float):
         """ Returns a shape to be rendered by view
         """
@@ -51,6 +51,7 @@ class ShapelyConcrete(ShapelyProxy):
     """ An invariant entity which can
     bake in its representation
     """
+    _impl: geos.base.BaseGeometry = None
     def get_impl(self) -> geos.base.BaseGeometry:
         """ Returns actual internal repr
         """
@@ -76,7 +77,7 @@ class Point(Entity):
 class Anchor(Point, ShapelyConcrete):
     """Static point dependent on nothing else
     """
-    _impl: geos.Point = None
+    # _impl: geos.Point = None
 
     def __init__(self, uid: str, rank: int, initial_position: XY):
         super().__init__(uid, rank)
@@ -88,7 +89,10 @@ class Anchor(Point, ShapelyConcrete):
         self._impl = geos.Point(coords)
 
     def get_coords(self, t:float) -> XY:
+        """Anchors are invariant"""
         return (self._impl.x, self._impl.y)
+
+
 
 
 class Intersection(Point):
@@ -137,7 +141,7 @@ class Line(Shape):
     """
 
     _parents: tuple[Point, Point] = None
-    _impl: geos.Line = None
+    _impl: geos.LineString = None
 
     def __init__(self, uid:str, rank:int, endpoints: tuple[Point, Point]):
         if endpoints[0] == endpoints[1]:
@@ -145,11 +149,11 @@ class Line(Shape):
         _parents = endpoints
         super().__init__(uid, rank)
 
-    def get_impl(self):
+    def get_impl(self, t: float):
         """ Make a shapely Line
             TODO - cache this!
         """
-        return geos.Line
+        return geos.LineString((self._parents[0].get_coords(t), self._parents[1].get_coords(t)))
 
 
 class PolyLine(Shape):

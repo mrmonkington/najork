@@ -4,4 +4,7 @@ build:
 run: build
 	flatpak-builder --verbose --run ./build com.verynoisy.najork.yml /app/bin/najork
 
-.PHONY: build run
+test:
+	python -m pytest tests/ --cov=najork
+
+.PHONY: build run test
