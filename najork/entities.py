@@ -1,10 +1,13 @@
 """
 Define all entities used in our scene graph
 See `../docs/modeling/classes.gaphor`
+
+TODO probably Numpy all of this
 """
 
 from abc import ABC, abstractmethod
 from shapely import geometry as geos
+from shapely import ops as geops
 
 from .osc import *
 
@@ -12,12 +15,15 @@ XY = tuple[float, float]
 
 BOUND_TOLERANCE = 5 # pixels
 
+def clamp(v: float) -> float:
+    return min(max(0.0, v), 1.0)
+
 class ImpossibleGeometry(Exception):
     """ You tried to make a Line out of two circles, or
     something mad, or set a negative radius, I dunno"""
 
 
-def XY_add(a, b):
+def XY_add(a: XY, b: XY) -> XY:
     return (a[0]+b[0] + a[1]+b[1])
 
 
@@ -41,21 +47,35 @@ class Entity(ABC):
         """ Returns a simplified shape suitable for picking
         """
 
+    def get_dependencies(self) -> list['Entity']:
+        """ Returns list of other entities this one depends on
+        """
+        return ()
+
 class ShapelyProxy(ABC):
     @abstractmethod
-    def get_impl(self) -> geos.base.BaseGeometry:
+    def get_impl(self, t:float) -> geos.base.BaseGeometry:
         """ Get a shapely version of whatever this is
         """
+    
+    def get_bounds(self, t:float) -> tuple[XY, XY]:
+        """ Re-chunk shapely's bounds method
+        """
+        mx, my, Mx, My = self.get_impl(t).bounds
+        return ((mx,my), (Mx, My))
+
 
 class ShapelyConcrete(ShapelyProxy):
     """ An invariant entity which can
     bake in its representation
     """
     _impl: geos.base.BaseGeometry = None
-    def get_impl(self) -> geos.base.BaseGeometry:
-        """ Returns actual internal repr
+    def get_impl(self, t:float) -> geos.base.BaseGeometry:
+        """ Returns actual internal repr. `t` is discarded since we
+            assume the representation does not change with time
         """
         return self._impl
+
 
 class Point(Entity):
     """Base class for any 1D item
@@ -93,6 +113,25 @@ class Anchor(Point, ShapelyConcrete):
         return (self._impl.x, self._impl.y)
 
 
+# Mixin must come first as it implements an abstract method Entity::get_bounds
+# see 
+class Shape(ShapelyProxy, Entity):
+    """ A 2D thing
+    """
+
+    def calc_procession_xy(self, t:float, length_fraction: float):
+        """ Find coords of a point located on the shape perimeter, at some
+            proportion of perimiter length measured from 'zero'
+        """
+        impl = self.get_impl(t)
+        segment = geops.substring(impl, 0.0, length_fraction, normalized=True)
+        return segment.coords[-1]
+
+    @property
+    def start():
+        """ Get the root, or start of this shape
+        """
+        return calc_procession_xy(1.0, 0.0)
 
 
 class Intersection(Point):
@@ -100,22 +139,36 @@ class Intersection(Point):
 
     Some shapes will have more than one intersection - we just
     keep it simple and take the first in an /undefined/ (TODO) order
+
+    If two shapes are wholly or partially congruent, shapely may produce
+    a substring as one of the intersections. Let's consider this a
+    non-intersection.
+
+    Where there is no intersection, return the first coord of first shape.
     """
+    def __init__(self, uid: str, rank: int, parents: list[Shape]):
+        super().__init__(uid, rank)
+        if len(parents) != 2:
+            raise ImpossibleGeometry(
+                "Trying to build Intersection of {} shapes".format(len(parents)))
+        self._parents = parents
+        """ Which two shapes are we intersecting """
 
+    def get_dependencies(self) -> list[Entity]:
+        return self._parents
 
-class Shape(Entity, ShapelyProxy):
-    """ A 2D thing
-    """
-
-    def calc_procession_xy(self, length_fraction: float):
-        impl = self.get_impl()
-        l = impl.length
-        segment = geos.substring(impl, l*length_fraction)
-        return segment.coords[-1]
+    def get_coords(self, t:float) -> XY:
+        if self._parents[0].get_impl(t).crosses(self._parents[1].get_impl(t)):
+            imp = self._parents[0].get_impl(t).intersection(self._parents[1].get_impl(t))
+            return (imp.x, imp.y)
+        else:
+            return self._parents[0].start
 
 
 class Slider(Point):
-    """
+    """ A point attached to a parent shape, which has a position
+    defined as a fraction of the total length of the parent shape
+    and has a 
     """
 
     # what are we sliding along?
@@ -123,17 +176,36 @@ class Slider(Point):
     # initially, how far along it are we as a function of length?
     _procession: float = None
     # how fast along it are we moving in length per second units?
+    _velocity: float = None
+
+    def __init__(self, uid: str, rank: int, parent: Shape):
+        super().__init__(uid, rank)
+        self._parent = parent
+        # what are we sliding along?
 
     def set_procession(self, proc: float):
-        """ Set's initial (t=0) position along parent
+        """ Sets initial (t=0) position along parent.
+
+        If > 1.0 will clamp
         """
-        self._procession = proc
+        self._procession = clamp(proc, 0.0, 1.0)
+
+    def set_procession(self, proc: float):
+        """ Sets initial (t=0) position along parent
+        """
+        self._velocity = velocity
 
     def get_coords(self, t:float) -> XY:
         """ Calculate coordinates of current position at time t
-        using initial position and velocity
+        using initial position and velocity. (Wraps)
         """
-        return self._parent.calc_procession_xy((self._procession + self._velocity * t) % 1.0)
+        # TODO accuracy implication from wrapping?
+        return self._parent.calc_procession_xy(t, (self._procession + self._velocity * t) % 1.0)
+
+    def get_dependencies(self) -> list[Entity]:
+        """ Returns list of other entities this one depends on
+        """
+        return [self._parent,]
 
 
 class Line(Shape):
@@ -146,7 +218,7 @@ class Line(Shape):
     def __init__(self, uid:str, rank:int, endpoints: tuple[Point, Point]):
         if endpoints[0] == endpoints[1]:
             raise ImpossibleGeometry("Line endpoints are the same point")
-        _parents = endpoints
+        self._parents = endpoints
         super().__init__(uid, rank)
 
     def get_impl(self, t: float):
@@ -154,6 +226,11 @@ class Line(Shape):
             TODO - cache this!
         """
         return geos.LineString((self._parents[0].get_coords(t), self._parents[1].get_coords(t)))
+
+    @property
+    def start():
+        # optimised for lines
+        return self._parents[0]
 
 
 class PolyLine(Shape):
@@ -167,6 +244,14 @@ class Circle(Shape):
     _radius: float = 0.0
     _impl: geos.LineString
     """
+    def __init__(self, uid:str, rank:int, centre: Point, radius: float, orientation: float):
+        if radius <= 0.0:
+            raise ImpossibleGeometry("Circles must have positive radius")
+        super().__init__(uid, rank)
+        self._centre: Point = centre
+        self._radius: float = radius
+        self._orientation: float = clamp(orientation, 0.0, 1.0)
+
 
 class Roller(Circle):
     """ I can't remember how this works
@@ -180,7 +265,7 @@ class Measurement(ABC):
     """ A value computed from some property of other entites
     """
     @abstractmethod
-    def get_value(self, t: float):
+    def get_value(self, t: float) -> float:
         """ What is this measurement's concrete value at time t?
         """
 
@@ -214,11 +299,12 @@ class Bumper(Slider, Port):
 
 
 class Control(Entity):
-    x: float = 0.0
-    y: float = 0.0
 
     def __init__(self, uid: str, x: float, y: float, msg: TemplatedOSCMessage):
         super().__init__(uid, rank)
+        self._x = x
+        self._y = y
+        self._msg = msg
 
     def get_representation(self, t:float):
         """ Returns a shape to be rendered by view
