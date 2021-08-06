@@ -14,9 +14,10 @@ from .osc import *
 XY = tuple[float, float]
 
 BOUND_TOLERANCE = 5 # pixels
+CIRCLE_RES = 64
 
-def clamp(v: float) -> float:
-    return min(max(0.0, v), 1.0)
+def clamp(v: float, m=0.0, M=1.0) -> float:
+    return min(max(m, v), M)
 
 class ImpossibleGeometry(Exception):
     """ You tried to make a Line out of two circles, or
@@ -123,9 +124,8 @@ class Shape(ShapelyProxy, Entity):
         """ Find coords of a point located on the shape perimeter, at some
             proportion of perimiter length measured from 'zero'
         """
-        impl = self.get_impl(t)
-        segment = geops.substring(impl, 0.0, length_fraction, normalized=True)
-        return segment.coords[-1]
+        p = self.get_impl(t).interpolate(clamp(length_fraction), normalized=True).coords
+        return p[0]
 
     @property
     def start():
@@ -152,7 +152,7 @@ class Intersection(Point):
             raise ImpossibleGeometry(
                 "Trying to build Intersection of {} shapes".format(len(parents)))
         self._parents = parents
-        """ Which two shapes are we intersecting """
+        """ Which two shapes are we intersecting? """
 
     def get_dependencies(self) -> list[Entity]:
         return self._parents
@@ -190,7 +190,7 @@ class Slider(Point):
         """
         self._procession = clamp(proc, 0.0, 1.0)
 
-    def set_procession(self, proc: float):
+    def set_velocity(self, velocity: float):
         """ Sets initial (t=0) position along parent
         """
         self._velocity = velocity
@@ -240,11 +240,16 @@ class PolyLine(Shape):
 
 
 class Circle(Shape):
-    """_centre: Point = None
-    _radius: float = 0.0
-    _impl: geos.LineString
+    """ An approxiation of a circle with CIRCLE_RES * 4 segments.
+
+    The 'zero' point on a circle is 0 angle on a traditional graph, hence the east
+    or rightmost point.
     """
-    def __init__(self, uid:str, rank:int, centre: Point, radius: float, orientation: float):
+    def __init__(self, uid: str, rank:int, centre: Point, radius: float, orientation: float):
+        """ A circle may have its default orientation defined as some proportion
+            of one total revolution. (We don't deal in angles or radians as they are not
+            intuitively useful for use of these as 'bars' of repeating events.
+        """
         if radius <= 0.0:
             raise ImpossibleGeometry("Circles must have positive radius")
         super().__init__(uid, rank)
@@ -252,6 +257,18 @@ class Circle(Shape):
         self._radius: float = radius
         self._orientation: float = clamp(orientation, 0.0, 1.0)
 
+    def get_impl(self, t:float):
+        return self._centre.get_impl(t).buffer(self._radius, resolution=CIRCLE_RES).exterior
+
+    def calc_procession_xy(self, t:float, length_fraction: float):
+        """ Find coords of a point located on the shape perimeter, at some
+            proportion of perimiter length measured from 'zero'
+        """
+        p = self.get_impl(t).interpolate(
+                (length_fraction + self._orientation) % 1.0,
+                normalized=True
+            ).coords
+        return p[0]
 
 class Roller(Circle):
     """ I can't remember how this works
