@@ -37,7 +37,7 @@ BOUND_TOLERANCE = 5
 # number of segments used to model a quarter circle
 # when buffering points or
 # chamfering edges
-CIRCLE_RES = 16
+CIRCLE_RES = 32
 
 
 def clamp(v: float, m=0.0, M=1.0) -> float:
@@ -53,8 +53,8 @@ def angle(line: geos.LineString) -> float:
     """
     s = line.coords[0]
     e = line.coords[-1]
-    dy = e.y - s.y
-    dx = e.x - s.x
+    dy = e[1] - s[1]
+    dx = e[0] - s[0]
 
     return degrees(atan2(dy, dx))
 
@@ -360,7 +360,7 @@ class Roller(Circle):
     _rolling_ang_vel: float = 0.0
 
 
-class Measurement(ABC):
+class Measurement(Entity):
     """ A value computed from some property of other entites
     """
     @abstractmethod
@@ -386,7 +386,15 @@ class Angle(Measurement):
         """ Shapely doesn't have an angle measuring method!
         """
         return (angle(self._parents[1].get_impl(t))
-                - angle(self._parents[2].get_impl(t)))
+                - angle(self._parents[0].get_impl(t))) % 360.0
+
+    def get_bounds(self, t: float) -> tuple[XY, XY]:
+        """ A bounding box contains both lines
+        """
+        ml = geos.MultiLineString([self._parents[0].get_impl(),
+                                   self._parents[1].get_impl()])
+        mx, my, Mx, My = ml.bounds
+        return ((mx, my), (Mx, My))
 
 
 class Distance(Measurement):
@@ -408,6 +416,13 @@ class Distance(Measurement):
     def get_value(self, t: float):
         return self._parents[0].get_impl(t).distance(
             self._parents[1].get_impl(t))
+
+    def get_bounds(self, t: float) -> tuple[XY, XY]:
+        """ A bounding box contains both lines
+        """
+        mx, my = self._parents[0].get_coords(t)
+        Mx, My = self._parents[1].get_coords(t)
+        return ((mx, my), (Mx, My))
 
 
 class Port:

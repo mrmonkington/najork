@@ -2,7 +2,10 @@
 from pytest import approx
 import logging
 
-from najork.entities import Anchor, Line, Slider, Circle, Intersection
+from najork.entities import (
+    Anchor, Line, Slider, Circle, Intersection, Distance,
+    Angle
+)
 
 def test_anchor():
     p = Anchor("p1",1,(0.0, 0.0))
@@ -135,3 +138,38 @@ def test_moving_intersection_linear_slider_unlooped():
     # check length goes from 1 to sqr(2)
     for t in range(0, 11):
         assert i1.get_coords(t/10.0) == approx((t/10.0, 1.0))
+
+def test_circle_slider_unlooped():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    c1 = Circle("c1", 2, p1, 1.0, 0.0)
+
+    s1 = Slider("s3", 3, c1, 0.0, 1.0, loop=False)
+
+    l2 = Line("l2", 4, (p1, s1))
+    for t in range(0, 11):
+        assert l2.get_impl(t/10.0).length == approx(1.0, rel=1e-3)
+
+    assert s1.get_coords(0.0) == approx((1.0, 0.0))
+    assert s1.get_coords(1.0) == approx((1.0, 0.0))
+    assert s1.get_coords(0.5) == approx((-1.0, 0.0))
+    assert s1.get_coords(0.25) == approx((0.0, -1.0))
+    assert s1.get_coords(0.75) == approx((0.0, 1.0))
+    # assert l2.get_impl(1.0).length == approx(sqrt(2.0))
+
+def test_distance():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p1", 1, (1.0, 1.0))
+    m1 = Distance("d1", 2, (p1, p2))
+    from math import sqrt
+    assert m1.get_value(0.0) == approx(sqrt(2.0))
+
+def test_angle():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p2", 1, (0.0, 1.0))
+    p3 = Anchor("p3", 1, (1.0, 0.0))
+    l1 = Line("l1", 2, (p1, p2))
+    l2 = Line("l2", 2, (p1, p3))
+    a1 = Angle("a1", 3, (l2, l1))  # l2 -> l1 is positive anticlkwise
+    from math import sqrt
+    assert a1.get_value(0.0) == approx(90.0)
+
