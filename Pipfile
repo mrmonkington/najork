@@ -12,6 +12,8 @@ jinja2 = "*"
 [dev-packages]
 pytest = "*"
 pytest-coverage = "*"
+pylint = "*"
+flake8 = "*"
 
 [requires]
 python_version = "3.9"

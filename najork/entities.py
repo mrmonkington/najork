@@ -1,23 +1,51 @@
 """
-Define all entities used in our scene graph
+Define all entities used in our scene graph.
 See `../docs/modeling/classes.gaphor`
 
-TODO probably Numpy all of this
+Our units of distance are effetively pixels, since these map quite
+reasonably well to MIDI/OSC controller resolution (0-127). A scene
+at 100% zoom should show plenty of elements and the overall structure.
+
+The geometry engine is Shapely and so:
+    - We can take advantage of intersections and modifiers, such as buffer
+    - We can create segments and interpolate along any construction
+    - We cannot model curves exactly (e.g. circles) and everything is a
+      polyline
+    - It's pretty fast
+
+We model any construction in a deterministic and closed form fashion. Thus
+`t` (time) is passed to most methods. I've avoided using any sort of
+context-based techniques since frequently we'll need the model at `t_n` and
+`t_n+1` in order to find collisions, etc, and context (fancy globals!) just
+makes this nightmare to unpick, merely for the sake of a little terseness.
+
+TODO probably Numpy all of this.
 """
 
 from abc import ABC, abstractmethod
 from shapely import geometry as geos
 from shapely import ops as geops
 
-from .osc import *
+from .osc import TemplatedOSCMessage
 
 XY = tuple[float, float]
 
-BOUND_TOLERANCE = 5 # pixels
-CIRCLE_RES = 64
+# pixels
+BOUND_TOLERANCE = 5
+
+# number of segments used to model a quarter circle
+# when buffering points or
+# chamfering edges
+CIRCLE_RES = 16
+
 
 def clamp(v: float, m=0.0, M=1.0) -> float:
+    """ CLAMP
+    do do do, do do do, do dodo do do
+    CLAMP
+    """
     return min(max(m, v), M)
+
 
 class ImpossibleGeometry(Exception):
     """ You tried to make a Line out of two circles, or
@@ -39,12 +67,12 @@ class Entity(ABC):
         self._rank = rank # probably not needed
 
     # TODO: @abstractmethod
-    def get_representation(self, t:float):
+    def get_representation(self, t: float):
         """ Returns a shape to be rendered by view
         """
 
     @abstractmethod
-    def get_bounds(self, t:float) -> tuple[XY, XY]:
+    def get_bounds(self, t: float) -> tuple[XY, XY]:
         """ Returns a simplified shape suitable for picking
         """
 
@@ -55,11 +83,11 @@ class Entity(ABC):
 
 class ShapelyProxy(ABC):
     @abstractmethod
-    def get_impl(self, t:float) -> geos.base.BaseGeometry:
+    def get_impl(self, t: float) -> geos.base.BaseGeometry:
         """ Get a shapely version of whatever this is
         """
-    
-    def get_bounds(self, t:float) -> tuple[XY, XY]:
+
+    def get_bounds(self, t: float) -> tuple[XY, XY]:
         """ Re-chunk shapely's bounds method
         """
         mx, my, Mx, My = self.get_impl(t).bounds
@@ -71,7 +99,7 @@ class ShapelyConcrete(ShapelyProxy):
     bake in its representation
     """
     _impl: geos.base.BaseGeometry = None
-    def get_impl(self, t:float) -> geos.base.BaseGeometry:
+    def get_impl(self, t: float) -> geos.base.BaseGeometry:
         """ Returns actual internal repr. `t` is discarded since we
             assume the representation does not change with time
         """
@@ -83,11 +111,11 @@ class Point(Entity):
     """
 
     @abstractmethod
-    def get_coords(self, t:float) -> XY:
+    def get_coords(self, t: float) -> XY:
         """X then Y
         """
 
-    def get_bounds(self, t:float):
+    def get_bounds(self, t: float):
         """Bounding box for a point is a smol square around it
         """
         x, y = self.get_coords(t)
@@ -109,7 +137,7 @@ class Anchor(Point, ShapelyConcrete):
         """
         self._impl = geos.Point(coords)
 
-    def get_coords(self, t:float) -> XY:
+    def get_coords(self, t: float) -> XY:
         """Anchors are invariant"""
         return (self._impl.x, self._impl.y)
 
@@ -120,7 +148,7 @@ class Shape(ShapelyProxy, Entity):
     """ A 2D thing
     """
 
-    def calc_procession_xy(self, t:float, length_fraction: float):
+    def calc_procession_xy(self, t: float, length_fraction: float):
         """ Find coords of a point located on the shape perimeter, at some
             proportion of perimiter length measured from 'zero'
         """
@@ -157,12 +185,12 @@ class Intersection(Point):
     def get_dependencies(self) -> list[Entity]:
         return self._parents
 
-    def get_coords(self, t:float) -> XY:
+    def get_coords(self, t: float) -> XY:
         if self._parents[0].get_impl(t).crosses(self._parents[1].get_impl(t)):
             imp = self._parents[0].get_impl(t).intersection(self._parents[1].get_impl(t))
             return (imp.x, imp.y)
         else:
-            return self._parents[0].start
+            return self._parents[0].start.get_coords(t)
 
 
 class Slider(Point):
@@ -178,9 +206,12 @@ class Slider(Point):
     # how fast along it are we moving in length per second units?
     _velocity: float = None
 
-    def __init__(self, uid: str, rank: int, parent: Shape):
+    def __init__(self, uid: str, rank: int, parent: Shape, procession: float, velocity: float, loop: bool = False):
         super().__init__(uid, rank)
         self._parent = parent
+        self.set_procession(procession) 
+        self.set_velocity(velocity) 
+        self.set_loop(loop) 
         # what are we sliding along?
 
     def set_procession(self, proc: float):
@@ -191,16 +222,23 @@ class Slider(Point):
         self._procession = clamp(proc, 0.0, 1.0)
 
     def set_velocity(self, velocity: float):
-        """ Sets initial (t=0) position along parent
+        """ Sets velocity in length/s units e.g. 0.1 = 1/10 of total
+        parent length per second
         """
         self._velocity = velocity
 
-    def get_coords(self, t:float) -> XY:
+    def set_loop(self, loop: bool):
+        self._loop = loop;
+
+    def get_coords(self, t: float) -> XY:
         """ Calculate coordinates of current position at time t
         using initial position and velocity. (Wraps)
         """
         # TODO accuracy implication from wrapping?
-        return self._parent.calc_procession_xy(t, (self._procession + self._velocity * t) % 1.0)
+        if self._loop:
+            return self._parent.calc_procession_xy(t, (self._procession + self._velocity * t) % 1.0)
+        else:
+            return self._parent.calc_procession_xy(t, clamp(self._procession + self._velocity * t))
 
     def get_dependencies(self) -> list[Entity]:
         """ Returns list of other entities this one depends on
@@ -225,10 +263,11 @@ class Line(Shape):
         """ Make a shapely Line
             TODO - cache this!
         """
-        return geos.LineString((self._parents[0].get_coords(t), self._parents[1].get_coords(t)))
+        return geos.LineString((self._parents[0].get_coords(t),
+                                self._parents[1].get_coords(t)))
 
     @property
-    def start():
+    def start(self):
         # optimised for lines
         return self._parents[0]
 
@@ -242,13 +281,15 @@ class PolyLine(Shape):
 class Circle(Shape):
     """ An approxiation of a circle with CIRCLE_RES * 4 segments.
 
-    The 'zero' point on a circle is 0 angle on a traditional graph, hence the east
-    or rightmost point.
+    The 'zero' point on a circle is 0 angle on a traditional graph, hence the
+    east or rightmost point.
     """
-    def __init__(self, uid: str, rank:int, centre: Point, radius: float, orientation: float):
-        """ A circle may have its default orientation defined as some proportion
-            of one total revolution. (We don't deal in angles or radians as they are not
-            intuitively useful for use of these as 'bars' of repeating events.
+    def __init__(self, uid: str, rank: int, centre: Point, radius: float,
+                 orientation: float):
+        """ A circle may have its default orientation defined as some
+        proportion of one total revolution. (We don't deal in angles or radians
+        as they are not intuitively useful for use of these as 'bars' of
+        repeating events.
         """
         if radius <= 0.0:
             raise ImpossibleGeometry("Circles must have positive radius")
@@ -257,10 +298,11 @@ class Circle(Shape):
         self._radius: float = radius
         self._orientation: float = clamp(orientation, 0.0, 1.0)
 
-    def get_impl(self, t:float):
-        return self._centre.get_impl(t).buffer(self._radius, resolution=CIRCLE_RES).exterior
+    def get_impl(self, t: float):
+        return self._centre.get_impl(t).buffer(self._radius,
+                                               resolution=CIRCLE_RES).exterior
 
-    def calc_procession_xy(self, t:float, length_fraction: float):
+    def calc_procession_xy(self, t: float, length_fraction: float):
         """ Find coords of a point located on the shape perimeter, at some
             proportion of perimiter length measured from 'zero'
         """
@@ -269,6 +311,7 @@ class Circle(Shape):
                 normalized=True
             ).coords
         return p[0]
+
 
 class Roller(Circle):
     """ I can't remember how this works
@@ -288,16 +331,23 @@ class Measurement(ABC):
 
 
 class Angle(Measurement):
-    """_parents: tuple[Line, Line]
-    """
+    def __init__(self, guid: str, rank: int, parents: tuple[Line, Line]):
+        super().__init__(guid, rank)
+        if len(parents) != 2:
+            raise ImpossibleGeometry("Angles can only be measured between"
+                                     "two Lines")
+        self._parents = parents
+
 
 class Distance(Measurement):
     """_parents: tuple[Point, Point]
     """
 
+
 class Port:
     """inputs: dict[str, Measurement] = None
     """
+
 
 class Bumper(Slider, Port):
     """An OSC 'event' emitting slider
@@ -310,25 +360,35 @@ class Bumper(Slider, Port):
             raise ImpossibleGeometry("Bumper cannot collide with its own parent")
         self._collision_parent = collides_with
 
-    def get_bounds(self, t:float) -> tuple[XY, XY]:
+    def test_collision(self, t: float, t_next: float):
+        """ Does this slider collide with its collision parent
+        during the next time slice?
+
+        A collision is defined as passing from one side of a line to the other
+        or moving from within a form to without
+        """
+
+    def get_bounds(self, t: float) -> tuple[XY, XY]:
         return ((self.x-BOUND_TOLERANCE, self.y-BOUND_TOLERANCE),
                 (self.x+BOUND_TOLERANCE, self.y+BOUND_TOLERANCE))
 
 
 class Control(Entity):
 
-    def __init__(self, uid: str, x: float, y: float, msg: TemplatedOSCMessage):
+    def __init__(self, uid: str, rank: int, x: float, y: float,
+                 msg: TemplatedOSCMessage):
         super().__init__(uid, rank)
+        # x and y are purely presentational
         self._x = x
         self._y = y
         self._msg = msg
 
-    def get_representation(self, t:float):
+    def get_representation(self, t: float):
         """ Returns a shape to be rendered by view
         """
         # some sort of point
 
-    def get_bounds(self, t:float) -> tuple[XY, XY]:
+    def get_bounds(self, t: float) -> tuple[XY, XY]:
         return ((self.x-BOUND_TOLERANCE, self.y-BOUND_TOLERANCE),
                 (self.x+BOUND_TOLERANCE, self.y+BOUND_TOLERANCE))
 
