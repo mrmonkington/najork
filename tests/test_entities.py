@@ -95,3 +95,43 @@ def test_line_linear_slider_unlooped():
     assert l2.get_impl(0.0).length == approx(1.0)
     assert l2.get_impl(1.0).length == approx(sqrt(2.0))
 
+def test_line_linear_slider_looped():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p2", 1, (1.0, 0.0))
+    l1 = Line("l1", 2, (p1, p2))
+
+    p3 = Anchor("p3", 2, (0.0, 1.0))
+
+    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=True)
+
+    l2 = Line("l2", 4, (s1, p3))
+    # check length goes from 1 to sqr(2)
+    from math import sqrt
+    assert l2.get_impl(0.0).length == approx(1.0)
+    assert l2.get_impl(1.0).length == approx(1.0)
+
+def test_moving_intersection_linear_slider_unlooped():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p2", 1, (1.0, 0.0))
+    l1 = Line("l1", 2, (p1, p2))
+
+    p3 = Anchor("p3", 1, (0.0, 2.0))
+    p4 = Anchor("p4", 1, (1.0, 2.0))
+    l2 = Line("l2", 2, (p3, p4))
+
+    # needs to extend slightly to avoid intersection
+    # failing due to FP tolerances
+    p3 = Anchor("p3", 1, (-0.1, 1.0))
+    p4 = Anchor("p4", 1, (1.1, 1.0))
+    l3 = Line("l3", 2, (p3, p4))
+
+    s1 = Slider("s1", 3, l1, 0.0, 1.0, loop=False)
+    s2 = Slider("s2", 3, l2, 0.0, 1.0, loop=False)
+
+    l4 = Line("l2", 4, (s1, s2))
+
+    i1 = Intersection("i1", 5, (l3, l4))
+
+    # check length goes from 1 to sqr(2)
+    for t in range(0, 11):
+        assert i1.get_coords(t/10.0) == approx((t/10.0, 1.0))
