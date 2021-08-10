@@ -74,21 +74,29 @@ class Entity(ABC):
     _uid: str = ""
     _rank: int = 0
 
+    @classmethod
+    @property
+    def classname(cls):
+        return cls.__name__.lower()
+
     def __init__(self, uid: str, rank: int):
         self._uid = uid
         self.set_rank(rank)
 
-    def set_rank(self, rank: int):
+    @property
+    def rank(self) -> int:
+        return self._rank
+
+    @rank.setter
+    def rank(self, rank: int):
         """ Set validated rank
         """
         for d in self.get_dependencies():
-            if d.get_rank() >= rank:
+            if d.rank >= rank:
                 raise ImpossibleGeometry("Entities must have rank greater than"
                                          " all childrens' ranks")
         self._rank = rank
 
-    def get_rank(self) -> int:
-        return self._rank
 
     # TODO: @abstractmethod
     def get_representation(self, t: float):
@@ -104,6 +112,10 @@ class Entity(ABC):
         """ Returns list of other entities this one depends on
         """
         return ()
+
+    @property
+    def uid(self) -> str:
+        return self._uid
 
 class ShapelyProxy(ABC):
     @abstractmethod
