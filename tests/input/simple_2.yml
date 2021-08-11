@@ -1,0 +1,25 @@
+---
+layers:
+  - rank: 1
+    children:
+      - entity: point
+        id: p0
+        coords: [100, 100]
+      - entity: point
+        id: p1
+        coords: [200, 100]
+  - rank: 2
+    children:
+      - entity: line
+        id: l1
+        parents:
+          - p0
+          - p1
+        default_child_velocity: 2.0
+  - rank: 3
+    children:
+      - entity: slider
+        id: s1
+        parent: l1
+        position: 0.0
+        velocity: 1.0

@@ -18,18 +18,18 @@ def test_anchored_line():
     l1 = Line("l1", 2, (p1, p2))
     for t in range(0, 11):
         # should be invariant
-        assert l1.calc_procession_xy(t/10.0, 0.0) == approx((0.0, 0.0))
-        assert l1.calc_procession_xy(t/10.0, 1.0) == approx((2.0, 2.0))
-        assert l1.calc_procession_xy(t/10.0, 0.5) == approx((1.0, 1.0))
+        assert l1.calc_position_xy(t/10.0, 0.0) == approx((0.0, 0.0))
+        assert l1.calc_position_xy(t/10.0, 1.0) == approx((2.0, 2.0))
+        assert l1.calc_position_xy(t/10.0, 0.5) == approx((1.0, 1.0))
 
 def test_anchored_circle():
     p1 = Anchor("p1", 1, (1.0, 1.0))
     c1 = Circle("c1", 2, p1, 1.0, 0.0) 
     for t in range(0, 11):
         # should be invariant
-        assert c1.calc_procession_xy(t/10.0, 0.0) == approx((2.0, 1.0))
-        assert c1.calc_procession_xy(t/10.0, 1.0) == approx((2.0, 1.0))
-        assert c1.calc_procession_xy(t/10.0, 0.5) == approx((0.0, 1.0))
+        assert c1.calc_position_xy(t/10.0, 0.0) == approx((2.0, 1.0))
+        assert c1.calc_position_xy(t/10.0, 1.0) == approx((2.0, 1.0))
+        assert c1.calc_position_xy(t/10.0, 0.5) == approx((0.0, 1.0))
 
 
 def test_anchored_intersection():
@@ -68,7 +68,7 @@ def test_linear_slider_unlooped():
     p1 = Anchor("p1",1,(0.0, 0.0))
     p2 = Anchor("p2",1,(2.0, 2.0))
     l1 = Line("l1", 2, (p1, p2))
-    s1 = Slider("s1", 3, l1, 0.0, 1.0, loop=False)
+    s1 = Slider("s1", 3, l1, 0.0, 1.0, loop=False, inherit_velocity=False)
     assert s1.get_coords(0.0) == approx((0.0, 0.0))
     assert s1.get_coords(0.5) == approx((1.0, 1.0))
     assert s1.get_coords(1.0) == approx((2.0, 2.0))
@@ -77,7 +77,7 @@ def test_linear_slider_looped():
     p1 = Anchor("p1",1,(0.0, 0.0))
     p2 = Anchor("p2",1,(2.0, 2.0))
     l1 = Line("l1", 2, (p1, p2))
-    s1 = Slider("s1", 3, l1, 0.0, 1.0, loop=True)
+    s1 = Slider("s1", 3, l1, 0.0, 1.0, loop=True, inherit_velocity=False)
     assert s1.get_coords(0.0) == approx((0.0, 0.0))
     assert s1.get_coords(0.5) == approx((1.0, 1.0))
     assert s1.get_coords(0.9) == approx((1.8, 1.8))
@@ -90,7 +90,7 @@ def test_line_linear_slider_unlooped():
 
     p3 = Anchor("p3", 2, (0.0, 1.0))
 
-    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=False)
+    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=False, inherit_velocity=False)
 
     l2 = Line("l2", 4, (s1, p3))
     # check length goes from 1 to sqr(2)
@@ -105,7 +105,7 @@ def test_line_linear_slider_looped():
 
     p3 = Anchor("p3", 2, (0.0, 1.0))
 
-    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=True)
+    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=True, inherit_velocity=False)
 
     l2 = Line("l2", 4, (s1, p3))
     # check length goes from 1 to sqr(2)
@@ -128,8 +128,8 @@ def test_moving_intersection_linear_slider_unlooped():
     p4 = Anchor("p4", 1, (1.1, 1.0))
     l3 = Line("l3", 2, (p3, p4))
 
-    s1 = Slider("s1", 3, l1, 0.0, 1.0, loop=False)
-    s2 = Slider("s2", 3, l2, 0.0, 1.0, loop=False)
+    s1 = Slider("s1", 3, l1, 0.0, 1.0, loop=False, inherit_velocity=False)
+    s2 = Slider("s2", 3, l2, 0.0, 1.0, loop=False, inherit_velocity=False)
 
     l4 = Line("l2", 4, (s1, s2))
 
@@ -143,7 +143,7 @@ def test_circle_slider_unlooped():
     p1 = Anchor("p1", 1, (0.0, 0.0))
     c1 = Circle("c1", 2, p1, 1.0, 0.0)
 
-    s1 = Slider("s3", 3, c1, 0.0, 1.0, loop=False)
+    s1 = Slider("s3", 3, c1, 0.0, 1.0, loop=False, inherit_velocity=False)
 
     l2 = Line("l2", 4, (p1, s1))
     for t in range(0, 11):

@@ -38,15 +38,15 @@ class Engine:
 
     def __init__(self):
         self.pos = 0.0
-    
+
     def start(self):
-        if self.running == False:
+        if not self.running:
             self.t = threading.Timer(FRAME_TIME, self.tick)
             self.t.start()
             self.running = True
 
     def pause(self):
-        if self.running == True and self.t.is_alive():
+        if self.running and self.t.is_alive():
             self.t.cancel()
             self.running = False
 
@@ -55,14 +55,14 @@ class Engine:
             self.pos = 0.0
 
     def tick(self):
-        #logging.debug("Engine::Tick")
+        # logging.debug("Engine::Tick")
         with self.state_lock:
             self.pos += 0.01
             if self.pos > 1.0:
                 self.pos = 0.0
         self.t = threading.Timer(FRAME_TIME, self.tick)
         self.t.start()
-        
+
 class Application(Gtk.Application):
     def __init__(self):
         super().__init__(application_id='com.verynoisy.najork',

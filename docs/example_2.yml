@@ -76,21 +76,21 @@ layers:
           - p2
   - rank: 3
     children:
-      - entity: dynpoint        # subclasses point
+      - entity: slider        # subclasses point
         id: p10
         parent: c2
         coords:
           - 0.9                   # x w.r.t to line as coordinate system (in this case circumferal)
           - 0.0                   # y w.r.t to line (in this case radial offset, positive = outwards)
         velocity: 0.1           # expressed in parent length (e.g. circumference) per measure (clockwise for circles)
-      - entity: dynpoint
+      - entity: slider
         id: p11
         parent: l1
         coords:
           - 0.0
           - 0.0
         velocity: "1.0/8"       # can this be an expression?
-      - entity: dynpoint
+      - entity: slider
         id: p12
         parent: l2
         coords:
@@ -110,19 +110,15 @@ layers:
           - p10
   - rank: 5
     children:
-      - entity: dynpoint
+      - entity: slider
         id: p13
         parent: c3
-        coords:
-          - 0.66
-          - 0.0                         # radial offset
+        progression: 0.66
         velocity: inherit               # use parent's default_child_velocity
-      - entity: dynevent
+      - entity: bumper
         id: e1
         parent: c3
-        coords:
-          - 0.0
-          - 0.0
+        progression: 0.66
         collides:
           - c1
         velocity: inherit

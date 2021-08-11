@@ -81,20 +81,26 @@ class Entity(ABC):
 
     def __init__(self, uid: str, rank: int):
         self._uid = uid
-        self.set_rank(rank)
+        self.rank = rank
 
     @property
     def rank(self) -> int:
         return self._rank
 
+    def calc_parent_rank(self):
+        """ Calculate our minumum possible
+        rank by inspecting our parents (scene is rank 0 and implied
+        as parent of all entities
+        """
+        return max([d.rank for d in self.get_dependencies()] + [0])
+
     @rank.setter
     def rank(self, rank: int):
         """ Set validated rank
         """
-        for d in self.get_dependencies():
-            if d.rank >= rank:
-                raise ImpossibleGeometry("Entities must have rank greater than"
-                                         " all childrens' ranks")
+        if rank <= self.calc_parent_rank():
+            raise ImpossibleGeometry("Entities must have rank greater than"
+                                     " all childrens' ranks")
         self._rank = rank
 
 
@@ -185,7 +191,12 @@ class Shape(ShapelyProxy, Entity):
     """ A 2D thing
     """
 
-    def calc_procession_xy(self, t: float, length_fraction: float):
+    def __init__(self, uid: str, rank: int,
+                 default_child_velocity: float = 0.0):
+        self.default_child_velocity = default_child_velocity
+        super().__init__(uid, rank)
+
+    def calc_position_xy(self, t: float, length_fraction: float):
         """ Find coords of a point located on the shape perimeter, at some
             proportion of perimiter length measured from 'zero'
         """
@@ -196,7 +207,15 @@ class Shape(ShapelyProxy, Entity):
     def start(self):
         """ Get the root, or start of this shape
         """
-        return self.calc_procession_xy(1.0, 0.0)
+        return self.calc_position_xy(1.0, 0.0)
+
+    @property
+    def default_child_velocity(self):
+        return self._default_child_velocity
+
+    @default_child_velocity.setter
+    def default_child_velocity(self, v: float):
+        self._default_child_velocity: float = v
 
 
 class Intersection(Point):
@@ -214,7 +233,10 @@ class Intersection(Point):
     def __init__(self, uid: str, rank: int, parents: list[Shape]):
         if len(parents) != 2:
             raise ImpossibleGeometry(
-                "Trying to build Intersection of {} shapes".format(len(parents)))
+                "Trying to build Intersection of {} shapes".format(
+                    len(parents)
+                )
+            )
         self._parents = parents
         """ Which two shapes are we intersecting? """
         super().__init__(uid, rank)
@@ -224,7 +246,9 @@ class Intersection(Point):
 
     def get_coords(self, t: float) -> XY:
         if self._parents[0].get_impl(t).crosses(self._parents[1].get_impl(t)):
-            imp = self._parents[0].get_impl(t).intersection(self._parents[1].get_impl(t))
+            imp = self._parents[0].get_impl(t).intersection(
+                self._parents[1].get_impl(t)
+            )
             return (imp.x, imp.y)
         else:
             return self._parents[0].start.get_coords(t)
@@ -239,25 +263,28 @@ class Slider(Point):
     # what are we sliding along?
     _parent: Shape = None
     # initially, how far along it are we as a function of length?
-    _procession: float = None
+    _position: float = None
     # how fast along it are we moving in length per second units?
     _velocity: float = None
+    _inherit_velocity: bool = True
 
-    def __init__(self, uid: str, rank: int, parent: Shape, procession: float,
-                 velocity: float, loop: bool = False):
+    def __init__(self, uid: str, rank: int, parent: Shape, position: float,
+                 velocity: float, loop: bool,
+                 inherit_velocity: bool):
         self._parent = parent
-        self.set_procession(procession) 
+        self.set_position(position) 
         self.set_velocity(velocity) 
+        self.inherit_velocity: float = inherit_velocity
         self.set_loop(loop) 
         # what are we sliding along?
         super().__init__(uid, rank)
 
-    def set_procession(self, proc: float):
+    def set_position(self, proc: float):
         """ Sets initial (t=0) position along parent.
 
         If > 1.0 will clamp
         """
-        self._procession = clamp(proc, 0.0, 1.0)
+        self._position = clamp(proc, 0.0, 1.0)
 
     def set_velocity(self, velocity: float):
         """ Sets velocity in length/s units e.g. 0.1 = 1/10 of total
@@ -273,12 +300,21 @@ class Slider(Point):
         using initial position and velocity. (Wraps)
         """
         # TODO accuracy implication from wrapping?
-        if self._loop:
-            return self._parent.calc_procession_xy(t,
-                (self._procession + self._velocity * t) % 1.0)
+        if self.inherit_velocity:
+            v = self._parent.default_child_velocity
         else:
-            return self._parent.calc_procession_xy(t,
-                clamp(self._procession + self._velocity * t))
+            v = self._velocity
+
+        if self._loop:
+            return self._parent.calc_position_xy(
+                t,
+                (self._position + v * t) % 1.0
+            )
+        else:
+            return self._parent.calc_position_xy(
+                t,
+                clamp(self._position + v * t)
+            )
 
     def get_dependencies(self) -> list[Entity]:
         """ Returns list of other entities this one depends on
@@ -298,11 +334,12 @@ class Line(Shape):
     _parents: tuple[Point, Point] = None
     _impl: geos.LineString = None
 
-    def __init__(self, uid:str, rank:int, endpoints: tuple[Point, Point]):
+    def __init__(self, uid:str, rank:int, endpoints: tuple[Point, Point],
+                 **kwargs):
         if endpoints[0] == endpoints[1]:
             raise ImpossibleGeometry("Line endpoints are the same point")
         self._parents = endpoints
-        super().__init__(uid, rank)
+        super().__init__(uid, rank, **kwargs)
 
     def get_impl(self, t: float):
         """ Make a shapely Line
@@ -315,6 +352,9 @@ class Line(Shape):
     def start(self):
         # optimised for lines
         return self._parents[0]
+
+    def get_dependencies(self) -> list['Entity']:
+        return self._parents
 
 
 class PolyLine(Shape):
@@ -330,7 +370,8 @@ class Circle(Shape):
     east or rightmost point.
     """
     def __init__(self, uid: str, rank: int, centre: Point, radius: float,
-                 orientation: float):
+                 orientation: float,
+                 **kwargs):
         """ A circle may have its default orientation defined as some
         proportion of one total revolution. (We don't deal in angles or radians
         as they are not intuitively useful for use of these as 'bars' of
@@ -341,13 +382,13 @@ class Circle(Shape):
         self._centre: Point = centre
         self._radius: float = radius
         self._orientation: float = clamp(orientation, 0.0, 1.0)
-        super().__init__(uid, rank)
+        super().__init__(uid, rank, **kwargs)
 
     def get_impl(self, t: float):
         return self._centre.get_impl(t).buffer(self._radius,
                                                resolution=CIRCLE_RES).exterior
 
-    def calc_procession_xy(self, t: float, length_fraction: float):
+    def calc_position_xy(self, t: float, length_fraction: float):
         """ Find coords of a point located on the shape perimeter, at some
             proportion of perimiter length measured from 'zero'
         """
@@ -448,16 +489,16 @@ class Bumper(Slider, Port):
     _collision_parent: Shape = None
     _msg: TemplatedOSCMessage = None
 
-    def __init__(self, uid: str, rank: int, parent: Shape, procession: float,
+    def __init__(self, uid: str, rank: int, parent: Shape, position: float,
                  velocity: float, collides_with: Shape, loop: bool = False):
         if parent == collides_with:
             raise ImpossibleGeometry("Bumper cannot collide with its own "
                                      "parent")
         self._collision_parent = collides_with
-        super().__init__(uid, rank, parent, procession, velocity, loop)
+        super().__init__(uid, rank, parent, position, velocity, loop)
 
     def test_collision(self, t: float, t_next: float) -> bool:
-        """ Does this slider collide with its collision parent
+        """ Does this bumper collide with its collision parent
         during the next time slice `t` -> `t_next`?
 
         A collision is defined as passing from one side of a line to the other

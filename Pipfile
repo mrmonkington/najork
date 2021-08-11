@@ -8,6 +8,7 @@ pycairo = "*"
 pygobject = "*"
 shapely = "*"
 jinja2 = "*"
+pyyaml = "*"
 
 [dev-packages]
 pytest = "*"

@@ -1,0 +1,7 @@
+---
+layers:
+  - rank: 1
+    children:
+      - entity: point
+        id: p0
+        coords: [100, 100]
