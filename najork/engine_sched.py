@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 from .scene import Scene
 
+from pythonosc.udp_client import SimpleUDPClient
 
 CV_FRAME_TIME = 1.0 / 24.0  # let's do PAL for now
 
@@ -38,19 +39,45 @@ class Engine:
             # just ignore - should we error?
             pass
 
-    def __init__(self, scene: Scene):
+    def __init__(self, scene: Scene, settings: dict):
         self._scene = scene
         self._pos = 0.0
         self._running = False
-        self.state_lock = threading.Lock()
-        self._s = sched.scheduler(time.monotonic, time.sleep)
         self._end_time = 0.0  # secs - 0 is run forever
+
+        self.state_lock = threading.Lock()
+
+        self._s = sched.scheduler(time.monotonic, time.sleep)
+
+        self.setup_osc(settings)
         self.spawn()
+
+    def setup_osc(self, settings):
+        if (
+                "osc" in settings
+                and "ip" in settings["osc"]
+                and "port" in settings["osc"]
+        ):
+            ip = settings["osc"]["ip"]
+            port = settings["osc"]["port"]
+            logging.debug(
+                "Creating OSC client to deliver to {}:{}".format(ip, port)
+            )
+            self._osc_client = SimpleUDPClient(ip, port)
+        else:
+            logging.debug("Clearing OSC client")
+            self._osc_client = None
 
     def spawn(self):
         self._alive = True
         self._t = threading.Thread(target=self._run)
         self._t.start()
+
+    def send_osc_msg(self, path, data):
+        if self._osc_client is not None:
+            logging.debug("Sending OSC message {}={}".format(path, data))
+            self._osc_client.send_message(path, data)
+
 
     def _run(self):
         # I think this is right :-)

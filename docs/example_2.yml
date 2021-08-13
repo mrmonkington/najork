@@ -153,15 +153,20 @@ layers:
           - l3
   - rank: 7
     children:
-      - entity: port                     # msg sent at global clock rate (configure this?)
-        id: port1
+      - entity: control                     # msg sent at global clock rate (configure this?)
+        id: ctrl1
         inputs: 1
-        msg: "/filter/cutoff/{in_1*0.2}"  # can evaluate simple expressions using https://github.com/AxiaCore/py-expression-eval/
+        path: "/filter/cutoff/"
+        data:
+          - "in_1 * 0.2"  # can evaluate simple expressions using https://github.com/AxiaCore/py-expression-eval/
         connections:
-          1: ang1
-      - entity: port
-        id: port2
+          in_1: ang1
+      - entity: control
+        id: ctrl2
         inputs: 1
-        msg: "/note/pitch/{in_1}"
+        path: "/note/pitch/"
+        data:
+          - "in_1"
+          - "t"       # current time t available in all contexts
         connections:
-          1: dist1
+          in_1: dist1

@@ -26,7 +26,7 @@ from abc import ABC, abstractmethod
 from shapely import geometry as geos
 from shapely import ops as geops
 
-from .osc import TemplatedOSCMessage
+from .osc import TemplatedMessage
 from math import atan2, degrees
 
 XY = tuple[float, float]
@@ -481,17 +481,32 @@ class Distance(Measurement):
         Mx, My = self._parents[1].get_coords(t)
         return ((mx, my), (Mx, My))
 
+class Control(Entity):
 
-class Port:
-    """inputs: dict[str, Measurement] = None
-    """
+    def __init__(self, uid: str, rank: int, x: float, y: float,
+                 path: str):
+        # x and y are purely presentational
+        self._x = x
+        self._y = y
+        self._msg = msg
+        super().__init__(uid, rank)
+
+    def get_representation(self, t: float):
+        """ Returns a shape to be rendered by view
+        """
+        # some sort of point
+
+    def get_bounds(self, t: float) -> tuple[XY, XY]:
+        return ((self._x-BOUND_TOLERANCE, self._y-BOUND_TOLERANCE),
+                (self._x+BOUND_TOLERANCE, self._y+BOUND_TOLERANCE))
 
 
-class Bumper(Slider, Port):
+
+class Bumper(Slider, Control):
     """An OSC 'event' emitting slider
     """
     _collision_parent: Shape = None
-    _msg: TemplatedOSCMessage = None
+    _msg: TemplatedMessage = None
 
     def __init__(self, uid: str, rank: int, parent: Shape, position: float,
                  velocity: float, collides_with: Shape, loop: bool = False):
@@ -520,25 +535,5 @@ class Bumper(Slider, Port):
         """ Returns list of other entities this one depends on
         """
         return [self._parent, self._collision_parent]
-
-
-class Control(Entity):
-
-    def __init__(self, uid: str, rank: int, x: float, y: float,
-                 msg: TemplatedOSCMessage):
-        # x and y are purely presentational
-        self._x = x
-        self._y = y
-        self._msg = msg
-        super().__init__(uid, rank)
-
-    def get_representation(self, t: float):
-        """ Returns a shape to be rendered by view
-        """
-        # some sort of point
-
-    def get_bounds(self, t: float) -> tuple[XY, XY]:
-        return ((self._x-BOUND_TOLERANCE, self._y-BOUND_TOLERANCE),
-                (self._x+BOUND_TOLERANCE, self._y+BOUND_TOLERANCE))
 
 

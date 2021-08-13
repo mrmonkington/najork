@@ -9,6 +9,8 @@ pygobject = "*"
 shapely = "*"
 jinja2 = "*"
 pyyaml = "*"
+python-osc = "*"
+py-expression-eval = "*"
 
 [dev-packages]
 pytest = "*"
