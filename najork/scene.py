@@ -70,9 +70,9 @@ class Scene():
     def load_from_dict(self, scene_def: dict):
         """ Build a scene from dict `scene_def` parsed from YAML
         (order something else, we don't care)
-        angle
+        x angle
         x circle
-        distance
+        x distance
         bumper
         x slider
         x intersection
@@ -116,6 +116,18 @@ class Scene():
                     p2 = self.get_by_id(e["parents"][1])
                     entity = Intersection(e["id"], rank["rank"],
                                           [p1, p2])
+
+                elif e["entity"] == "distance":
+                    p1 = self.get_by_id(e["parents"][0])
+                    p2 = self.get_by_id(e["parents"][1])
+                    entity = Distance(e["id"], rank["rank"],
+                                      [p1, p2])
+
+                elif e["entity"] == "angle":
+                    p1 = self.get_by_id(e["parents"][0])
+                    p2 = self.get_by_id(e["parents"][1])
+                    entity = Distance(e["id"], rank["rank"],
+                                      [p1, p2])
 
                 else:
                     raise InputError(

@@ -257,7 +257,10 @@ class Intersection(Point):
 class Slider(Point):
     """ A point attached to a parent shape, which has a position
     defined as a fraction of the total length of the parent shape
-    and has a 
+    and has a velocity along the parent shape which is either inherited
+    from the shape 'default child velocity' or which is overriden.
+    Optionally, the slider can loop along the parent, wrapping off the
+    end back to the beginning (or vice versa if vel is -ve).
     """
 
     # what are we sliding along?
@@ -266,6 +269,7 @@ class Slider(Point):
     _position: float = None
     # how fast along it are we moving in length per second units?
     _velocity: float = None
+    # use own velocity or vel defined by parent
     _inherit_velocity: bool = True
 
     def __init__(self, uid: str, rank: int, parent: Shape, position: float,

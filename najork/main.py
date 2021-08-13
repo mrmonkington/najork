@@ -15,53 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+
 import sys
 import gi
 
 gi.require_version('Gtk', '4.0')
-
 from gi.repository import Gtk, Gio
 
 from .window import NajorkWindow
+from .engine_sched import Engine
 
-import threading
-
-import logging
 logging.basicConfig(level=logging.DEBUG)
 
-FRAME_TIME = 1.0 / 24.0 # let's do PAL for now
-
-class Engine:
-
-    running = False
-    state_lock = threading.Lock()
-
-    def __init__(self):
-        self.pos = 0.0
-
-    def start(self):
-        if not self.running:
-            self.t = threading.Timer(FRAME_TIME, self.tick)
-            self.t.start()
-            self.running = True
-
-    def pause(self):
-        if self.running and self.t.is_alive():
-            self.t.cancel()
-            self.running = False
-
-    def rewind(self):
-        with self.state_lock:
-            self.pos = 0.0
-
-    def tick(self):
-        # logging.debug("Engine::Tick")
-        with self.state_lock:
-            self.pos += 0.01
-            if self.pos > 1.0:
-                self.pos = 0.0
-        self.t = threading.Timer(FRAME_TIME, self.tick)
-        self.t.start()
+RENDER_FRAME_TIME = 1.0 / 24.0 # let's do PAL for now
 
 class Application(Gtk.Application):
     def __init__(self):
@@ -69,16 +36,16 @@ class Application(Gtk.Application):
                          flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.connect("shutdown", self.on_quit)
         self.engine = Engine()
+        self.window = None
 
     def on_quit(self, *args):
         self.engine.pause()
         self.quit()
 
     def do_activate(self):
-        win = self.props.active_window
-        if not win:
-            win = NajorkWindow(engine=self.engine, application=self)
-        win.present()
+        if not self.window:
+            self.window = NajorkWindow(engine=self.engine, application=self)
+        self.window.present()
         #self.engine.start()
 
 
