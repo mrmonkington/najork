@@ -6,8 +6,7 @@
 
 It uses a scheduler in a thread, which may seem a little mad
 but it's the best way I've found to ensure realtime-ish delivery
-of OSC packets.
-
+of OSC packets and not spend too long burning CPU in a python loop.
 
 """
 
@@ -20,7 +19,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 from .scene import Scene
 
-from pythonosc.udp_client import SimpleUDPClient
+from oscpy.client import OSCClient
 
 CV_FRAME_TIME = 1.0 / 24.0  # let's do PAL for now
 
@@ -47,6 +46,7 @@ class Engine:
 
         self.state_lock = threading.Lock()
 
+        # use time.monotonic so NTP can't mess things up for us
         self._s = sched.scheduler(time.monotonic, time.sleep)
 
         self.setup_osc(settings)
@@ -63,25 +63,41 @@ class Engine:
             logging.debug(
                 "Creating OSC client to deliver to {}:{}".format(ip, port)
             )
-            self._osc_client = SimpleUDPClient(ip, port)
+            self._osc_client = OSCClient(ip, port)
         else:
             logging.debug("Clearing OSC client")
             self._osc_client = None
 
     def spawn(self):
+        """ Build it up
+        """
         self._alive = True
         self._t = threading.Thread(target=self._run)
         self._t.start()
 
+    def shutdown(self):
+        """ Tear it down
+        """
+        self.pause()
+        self._alive = False
+        self._t.join()
+
     def send_osc_msg(self, path, data):
+        """ Construct and dispatch and OSC message
+        to pre-configured endpoint
+        """
         if self._osc_client is not None:
             logging.debug("Sending OSC message {}={}".format(path, data))
             self._osc_client.send_message(path, data)
 
 
     def _run(self):
+        """ Internal thread worker
+        """
         # I think this is right :-)
         # block if any events are sheduled, else just freewheel?
+        # another approach is to just do a 100us sleep in a loop
+        # https://github.com/ideoforms/isobar/blob/master/isobar/timeline/clock.py#L65
         while self._alive:
             self._s.run(blocking=True)
             # this loop should spend most time blocking in above call.
@@ -100,22 +116,25 @@ class Engine:
         # clear all events and kill execution thread
         self.shutdown()
 
-    def shutdown(self):
-        self.pause()
-        self._alive = False
-        self._t.join()
 
-    def next_time(self):
+    def _next_time(self):
+        """ Internal thread worker
+        """
         return self._last + CV_FRAME_TIME
 
     def start(self):
+        """ Start the engine running wherever the internal
+        timeline clock currently is
+        """
         # reset the stopclock
         self._last = time.monotonic()
         if not self._running:
-            self._s.enterabs(self.next_time(), 1, self.tick)
+            self._s.enterabs(self._next_time(), 1, self.tick)
             self._running = True
 
     def pause(self):
+        """ Pauses the engine in a resumable way
+        """
         if self._running:
             self._running = False
             # terminate any outstanding events (hopefully <= 1)
@@ -123,12 +142,18 @@ class Engine:
                 self._s.cancel(ev)
 
     def rewind(self):
+        """ Pauses the engine in a resumable way
+        """
         # we should pause and restart to clear any pending scheduled
         # events
-        self.pause()
-        with self.state_lock:
-            self._pos = 0.0
-        self.start()
+        if self._running:
+            self.pause()
+            with self.state_lock:
+                self._pos = 0.0
+            self.start()
+        else:
+            with self.state_lock:
+                self._pos = 0.0
 
     def tick(self):
         logging.debug("Engine::Tick")
@@ -141,9 +166,10 @@ class Engine:
             self._pos += CV_FRAME_TIME
 
         if self._end_time > 0.0 and self._pos > self._end_time:
+            # end time == 0.0 means run forever
             self.pause()
 
         elif self._running:
             # schedule next tick straight away
-            self._last = self.next_time()
-            self._s.enterabs(self.next_time(), 1, self.tick)
+            self._last = self._next_time()
+            self._s.enterabs(self._next_time(), 1, self.tick)

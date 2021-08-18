@@ -1,14 +1,20 @@
 """
-Scene handles
+The Scene object handles:
 
  - Registration of all entities and ensuring consistency
  - Loading and saving of entity scenes
+ - Exposing the scene to the engine
  - Exposing the scene to the renderer
 
 This is a single-document-interface application, so there's only one scene
 at a time, though this doesn't really need to be enforced.
 
+A Scene is stateless once set-up (i.e. w.r.t. to `t`), and there aren't really
+any re-entrancy concerns.
+
 """
+
+# TODO ensure caching is similarly thread safe
 
 from .entities import (
     Entity, Anchor, Line, Slider, Circle, Intersection, Distance, Angle
@@ -17,15 +23,41 @@ from .entities import (
 from collections import defaultdict
 import functools
 
+
 class InputError(Exception):
     """ Something wrong with input scene def
     """
 
+
 class Scene():
+    """ The Scene object. Creat one of these and either
+    explicity add entities:
+
+    ```
+        from najork.scene import Scene
+        from najork.entities import Anchor
+
+        s = Scene()
+        s.create_entity(Anchor, (1.0, 1.0))
+    ```
+
+    ...or use the loader:
+
+    ```
+        from najork.scene import Scene
+        import yaml
+
+        s = Scene()
+        with open("scene.yml") as inp:
+            y1 = yaml.load(inp.read(), Loader=yaml.Loader)
+            s.load_from_dict(y1)
+    ```
+
+    """
 
     def __init__(self):
         self._registry = {}
-        self._sequences = defaultdict(lambda:1)
+        self._sequences = defaultdict(lambda: 1)
 
     def get_next_id(self, classname: str) -> str:
         """ Get a unique sequence ID with which to register

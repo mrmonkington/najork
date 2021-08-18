@@ -9,8 +9,8 @@ pygobject = "*"
 shapely = "*"
 jinja2 = "*"
 pyyaml = "*"
-python-osc = "*"
 py-expression-eval = "*"
+oscpy = "*"
 
 [dev-packages]
 pytest = "*"
@@ -18,6 +18,7 @@ pytest-coverage = "*"
 pylint = "*"
 flake8 = "*"
 ipython = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.9"
