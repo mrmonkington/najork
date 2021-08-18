@@ -4,18 +4,20 @@ Womble, muck and sneedball inspired musical scores.
 
 ![image](https://user-images.githubusercontent.com/778856/125062656-8bd33600-e0a6-11eb-8fa9-47292c8074ca.png)
 
-Najork is a geometric, kinetic composition environment for music, and anything else that can consume OSC events.
+Najork *will be* a geometric, kinetic composition environment for music, and anything else that can consume OSC events (lighting, installations).
 
 It takes its inspiration from the veritable [Iannix](https://www.iannix.org/) with a focus on periodic events and modulations linked to articulated constructions.
 
-By parenting mechanisms and objects to each other all sorts of interesting relationships can be translated in music (listener enjoyment not guaranteed).
+By parenting mechanisms and objects to each other all sorts of unpredicatable relationships can be translated into musical rhythms and patterns (listener enjoyment not guaranteed).
+
+Najork does not create sound, it is a note and parameter source for a sound producing application, such as a DAW or modular system.
 
 ## Project status
 
   - Models [80%]
   - Read file [50%]
   - Write file
-  - Run engine [20%]
+  - Run engine [50%]
   - Render
   - Edit
 
@@ -46,7 +48,7 @@ pipenv run make debug
 
 ### Packaging (WIP)
 
-Eventually Najork will be packaged as a Flatpak, and for now will run
+Eventually Najork will be packaged as a Flatpak, and for now may run
 from a Flatpak build directory:
 
 ```
