@@ -488,8 +488,31 @@ class Control(Entity):
         # x and y are purely presentational
         self._x = x
         self._y = y
-        self._msg = msg
+        self._msg = TemplatedMessage(path, [], self._bindings)
+        self._inputs = {}
         super().__init__(uid, rank)
+
+    def add_input(self, uid, measurement: Measurement):
+        """ Register another Measurement entity as a value source
+        """
+        self._inputs[uid] = measurement
+
+    @property
+    def msg(self):
+        return self._msg
+
+    def remove_input(self, uid):
+        """ Delete a value source by ID
+        """
+        del self._inputs[uid]
+
+    def _bindings(self, t: float):
+        """ yields all inputs resolved @ `t` for use
+        by OSC message template
+        """
+        return {
+            k: v.get_value(t) for (k, v) in self._inputs.items()
+        }
 
     def get_representation(self, t: float):
         """ Returns a shape to be rendered by view
@@ -501,20 +524,21 @@ class Control(Entity):
                 (self._x+BOUND_TOLERANCE, self._y+BOUND_TOLERANCE))
 
 
-
 class Bumper(Slider, Control):
     """An OSC 'event' emitting slider
     """
-    _collision_parent: Shape = None
-    _msg: TemplatedMessage = None
+    #_collision_parent: Shape = None
+    #_msg: TemplatedMessage = None
 
     def __init__(self, uid: str, rank: int, parent: Shape, position: float,
-                 velocity: float, collides_with: Shape, loop: bool = False):
+                 velocity: float, collides_with: Shape, path: str,
+                 loop: bool = False):
         if parent == collides_with:
             raise ImpossibleGeometry("Bumper cannot collide with its own "
                                      "parent")
         self._collision_parent = collides_with
-        super().__init__(uid, rank, parent, position, velocity, loop)
+        Slider.__init__(self, uid, rank, parent, position, velocity, loop)
+        Control.__init__(self, uid, rank, 0.0, 0.0, path)
 
     def test_collision(self, t: float, t_next: float) -> bool:
         """ Does this bumper collide with its collision parent

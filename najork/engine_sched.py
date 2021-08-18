@@ -173,3 +173,11 @@ class Engine:
             # schedule next tick straight away
             self._last = self._next_time()
             self._s.enterabs(self._next_time(), 1, self.tick)
+
+        if self._running:
+            self._triggers(self._pos)
+
+    def _triggers(self, t: float):
+        controls = self._scene.list_by_class("control")
+        for c in controls:
+            self.send_osc_msg(c.msg.get_path(t), c.msg.get_data(t))

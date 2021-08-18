@@ -8,14 +8,12 @@ class Message(ABC):
     """ Something sendable
     """
 
-    @property
     @abstractmethod
-    def path(self):
+    def get_path(self, t: float):
         pass
 
-    @property
     @abstractmethod
-    def data(self):
+    def get_data(self, t: float):
         pass
 
 class ConcreteMessage(Message):
@@ -24,23 +22,20 @@ class ConcreteMessage(Message):
         self._path = path
         self._data = data
 
-    @property
-    def path(self):
+    def get_path(self, t: float):
         return self._path
 
-    @property
-    def data(self):
+    def get_data(self, t: float):
         return self._data
 
-    @path.setter
-    def path(self):
-        return self._path
+    def set_path(self, new: str):
+        self._path = new
 
-    @data.setter
-    def data(self):
-        return self._data
+    def set_data(self, new_data: list):
+        self._data = new_data
 
-class TemplatedMessage(Message):
+
+class TemplatedMessage(ConcreteMessage):
     """ An OSC message with bindable params
     and ability to compute values
     """
@@ -48,51 +43,36 @@ class TemplatedMessage(Message):
     def __init__(self, path, data, bindings: callable):
         self._bindings = bindings
         self._expr_parser = Parser()
-        self.parse()
         super().__init__(path, data)
 
-    def parse(self):
+        self._parse()
+
+    def _get_bindings(self, t: float):
+        extra = self._bindings(t)
+        extra["t"] = t
+        return extra
+
+    def _parse(self):
         self._data_parsed = {
             exp: self._expr_parser.parse(exp)
             for exp in self._data
         }
 
-#    def get_msg(self, t):
-#        return self._template.render(
-#            self._bindings(t),
-#            math=math,
-#            t=t
-#        )
-
-    @property
-    def path(self):
-        return self._path
-        raise AttributeError("Access template path using .bind_path(t)")
-
-    @property
-    def data(self):
-        raise AttributeError("Access template date using .bind_data(t)")
-
-    @path.setter
-    def path(self, new_path: str):
-        self._path = new_path
-
-    @data.setter
-    def data(self, new_data: list):
+    def set_data(self, new_data: list):
         self._data = new_data
-        self.parse()
+        self._parse()
 
-    #def bind_path(self, t: float):
-    #    return self.eval(self._path, t)
-
-    def bind_data(self, t: float):
+    def get_data(self, t: float):
+        """ Get data expressions evaluated using curret @'t' input
+        values, in the order the expressions were registered
+        """
         return [
-            self.eval(self._bind_data[d], t)
+            self._eval(self._data_parsed[d], t)
             for d in self._data
         ]
 
-    def eval(self, expr: Expression, t: float):
-        return expr.evaluate(self._bindings)
+    def _eval(self, expr: Expression, t: float):
+        return expr.evaluate(self._get_bindings(t))
 
 
 
