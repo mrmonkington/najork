@@ -27,7 +27,7 @@ from shapely import geometry as geos
 from shapely import ops as geops
 
 from .osc import TemplatedMessage
-from math import atan2, degrees
+from math import atan2, degrees, pi as PI
 
 XY = tuple[float, float]
 
@@ -49,14 +49,15 @@ def clamp(v: float, m=0.0, M=1.0) -> float:
 
 
 def angle(line: geos.LineString) -> float:
-    """ Computer angle of line
+    """ Computer angle of line in
+    revolutions (1 rev = 360 degrees)
     """
     s = line.coords[0]
     e = line.coords[-1]
     dy = e[1] - s[1]
     dx = e[0] - s[0]
 
-    return degrees(atan2(dy, dx))
+    return (atan2(dy, dx))/(PI*2)
 
 
 class ImpossibleGeometry(Exception):
@@ -218,7 +219,7 @@ class Shape(ShapelyProxy, Entity):
         self._default_child_velocity: float = v
 
 
-class Intersection(Point):
+class Intersection(Point, ShapelyProxy):
     """ A point where two shapes cross
 
     Some shapes will have more than one intersection - we just
@@ -253,8 +254,11 @@ class Intersection(Point):
         else:
             return self._parents[0].start.get_coords(t)
 
+    def get_impl(self, t: float) -> geos.base.BaseGeometry:
+        return geos.Point(self.get_coords(t))
 
-class Slider(Point):
+
+class Slider(Point, ShapelyProxy):
     """ A point attached to a parent shape, which has a position
     defined as a fraction of the total length of the parent shape
     and has a velocity along the parent shape which is either inherited
@@ -263,22 +267,18 @@ class Slider(Point):
     end back to the beginning (or vice versa if vel is -ve).
     """
 
-    # what are we sliding along?
-    _parent: Shape = None
-    # initially, how far along it are we as a function of length?
-    _position: float = None
-    # how fast along it are we moving in length per second units?
-    _velocity: float = None
-    # use own velocity or vel defined by parent
-    _inherit_velocity: bool = True
 
     def __init__(self, uid: str, rank: int, parent: Shape, position: float,
                  velocity: float, loop: bool,
                  inherit_velocity: bool):
-        self._parent = parent
+        self._parent: Shape = parent
+        """ what are we sliding along? """
         self.set_position(position) 
+        """ initially, how far along it are we as a function of length? """
         self.set_velocity(velocity) 
+        """ how fast along it are we moving in length per second units? """
         self.inherit_velocity: float = inherit_velocity
+        """ use own velocity or vel defined by parent """
         self.set_loop(loop) 
         # what are we sliding along?
         super().__init__(uid, rank)
@@ -330,6 +330,8 @@ class Slider(Point):
         return ((x-BOUND_TOLERANCE, y-BOUND_TOLERANCE),
                 (x+BOUND_TOLERANCE, y+BOUND_TOLERANCE))
 
+    def get_impl(self, t: float) -> geos.base.BaseGeometry:
+        return geos.Point(self.get_coords(t))
 
 class Line(Shape):
     """ A line *segment*
@@ -408,13 +410,12 @@ class Circle(Shape):
         return [self._centre, ]
 
 
-
 class Roller(Circle):
     """ I can't remember how this works
     Always write your ideas down immediately and fully
     """
-    _rolling_surface: Shape = None
-    _rolling_ang_vel: float = 0.0
+    #_rolling_surface: Shape = None
+    #_rolling_ang_vel: float = 0.0
 
 
 class Measurement(Entity):
@@ -443,7 +444,7 @@ class Angle(Measurement):
         """ Shapely doesn't have an angle measuring method!
         """
         return (angle(self._parents[1].get_impl(t))
-                - angle(self._parents[0].get_impl(t))) % 360.0
+                - angle(self._parents[0].get_impl(t))) % 1.0
 
     def get_bounds(self, t: float) -> tuple[XY, XY]:
         """ A bounding box contains both lines
@@ -527,17 +528,16 @@ class Control(Entity):
 class Bumper(Slider, Control):
     """An OSC 'event' emitting slider
     """
-    #_collision_parent: Shape = None
-    #_msg: TemplatedMessage = None
 
     def __init__(self, uid: str, rank: int, parent: Shape, position: float,
                  velocity: float, collides_with: Shape, path: str,
-                 loop: bool = False):
+                 loop: bool, inherit_velocity: bool):
         if parent == collides_with:
             raise ImpossibleGeometry("Bumper cannot collide with its own "
                                      "parent")
         self._collision_parent = collides_with
-        Slider.__init__(self, uid, rank, parent, position, velocity, loop)
+        Slider.__init__(self, uid, rank, parent, position, velocity, loop,
+                        inherit_velocity)
         Control.__init__(self, uid, rank, 0.0, 0.0, path)
 
     def test_collision(self, t: float, t_next: float) -> bool:
@@ -546,6 +546,16 @@ class Bumper(Slider, Control):
 
         A collision is defined as passing from one side of a line to the other
         or moving from within a form to without
+
+        TODO: this only currently works if the point moves, not the shape and
+        do we need instead to test if a point goes from one side to another
+        possibly as per https://gis.stackexchange.com/questions/156578/detecting-if-point-is-on-left-or-right-side-of-line-in-postgis
+        use shape.project(bumper, normalized=1) > 0 and < 1 to ensure point
+        would cross line
+        Then find left-right-ness and see if it changes during window
+            - interpolate a point on shape, find azimuth and see if it changes
+            sign
+        
         """
         # calculate trajectory of point
         traj: geos.LineString = geos.LineString((self.get_coords(t),

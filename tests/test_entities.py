@@ -4,7 +4,7 @@ import logging
 
 from najork.entities import (
     Anchor, Line, Slider, Circle, Intersection, Distance,
-    Angle
+    Angle, Control, Bumper
 )
 
 def test_anchor():
@@ -171,5 +171,97 @@ def test_angle():
     l2 = Line("l2", 2, (p1, p3))
     a1 = Angle("a1", 3, (l2, l1))  # l2 -> l1 is positive anticlkwise
     from math import sqrt
-    assert a1.get_value(0.0) == approx(90.0)
+    # 1/4 == 90deg
+    assert a1.get_value(0.0) == approx(1.0/4.0)
 
+def test_control_simple():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p2", 1, (1.0, 0.0))
+    l1 = Line("l1", 2, (p1, p2))
+
+    p3 = Anchor("p3", 2, (0.0, 1.0))
+
+    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=False, inherit_velocity=False)
+
+    m1 = Distance("d1", 4, (p3, s1))
+
+    c1 = Control("c1", 5, 0.0, 0.0, b"/bums")
+
+    c1.add_input("in_1", m1)
+    c1.msg.set_data(["in_1 * 2", ])
+    from math import sqrt
+    assert c1.msg.get_data(0.0) == approx([2.0, ])
+    assert c1.msg.get_data(1.0) == approx([2 * sqrt(2.0), ])
+
+def test_control_simple_2():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p2", 1, (1.0, 0.0))
+    l1 = Line("l1", 2, (p1, p2))
+
+    p3 = Anchor("p3", 2, (0.0, 1.0))
+
+    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=False, inherit_velocity=False)
+
+    l2 = Line("l2", 3, (p3, p1))
+    l3 = Line("l3", 4, (p3, s1))
+
+    m1 = Distance("d1", 4, (p3, s1))
+    a1 = Angle("a1", 5, (l2, l3))
+
+    c1 = Control("c1", 5, 0.0, 0.0, b"/bums")
+
+    c1.add_input("in_1", m1)
+    c1.add_input("in_2", a1)
+    c1.msg.set_data([
+        "in_1 * 2",
+        "in_2",
+    ])
+    from math import sqrt
+    assert c1.msg.get_data(0.0) == approx([2.0, 0.0])  # ||_
+    assert c1.msg.get_data(1.0) == approx([2 * sqrt(2.0), 1.0/8.0])  # |\_
+
+def test_control_compound():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p2", 1, (1.0, 0.0))
+    l1 = Line("l1", 2, (p1, p2))
+
+    p3 = Anchor("p3", 2, (0.0, 1.0))
+
+    s1 = Slider("s3", 3, l1, 0.0, 1.0, loop=False, inherit_velocity=False)
+
+    l2 = Line("l2", 3, (p3, p1))
+    l3 = Line("l3", 4, (p3, s1))
+
+    m1 = Distance("d1", 4, (p3, s1))
+    a1 = Angle("a1", 5, (l2, l3))
+
+    c1 = Control("c1", 5, 0.0, 0.0, b"/bums")
+
+    c1.add_input("in_1", m1)
+    c1.add_input("in_2", a1)
+    c1.msg.set_data([
+        "in_1 * in_2",
+    ])
+    from math import sqrt
+    assert c1.msg.get_data(0.0) == approx([0.0, ])  # ||_
+    assert c1.msg.get_data(1.0) == approx([sqrt(2.0) / 8.0, ])  # |\_
+
+"""def test_bumper_concrete():
+    p1 = Anchor("p1", 1, (0.0, 0.0))
+    p2 = Anchor("p2", 1, (1.0, 0.0))
+    l1 = Line("l1", 2, (p1, p2))
+
+    p3 = Anchor("p3", 1, (0.5, 1.0))
+    p4 = Anchor("p4", 1, (0.5, -1.0))
+
+    l2 = Line("l2", 2, (p3, p4))
+
+    b1 = Bumper("b1", 3,
+                l1, 0.0, 1.0,
+                l2, "/bump",
+                loop=False, inherit_velocity=False)
+
+    b1.msg.set_data([
+        "1",
+    ])
+"""

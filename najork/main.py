@@ -24,7 +24,10 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Gio
 
 from .window import NajorkWindow
+from .scene import Scene
 from .engine_sched import Engine
+
+from najork.config import DEFAULT_SETTINGS
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -35,11 +38,13 @@ class Application(Gtk.Application):
         super().__init__(application_id='com.verynoisy.najork',
                          flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.connect("shutdown", self.on_quit)
-        self.engine = Engine()
+        self.scene = Scene()
+        self.engine = Engine(self.scene, DEFAULT_SETTINGS)
         self.window = None
 
     def on_quit(self, *args):
         self.engine.pause()
+        self.engine.shutdown()
         self.quit()
 
     def do_activate(self):
