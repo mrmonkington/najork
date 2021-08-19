@@ -14,10 +14,10 @@ Najork does not create sound, it is a note and parameter source for a sound prod
 
 ## Project status
 
-  - Models [80%]
+  - Models [90%]
   - Read file [50%]
   - Write file
-  - Run engine [50%]
+  - Run engine [70%]
   - Render
   - Edit
 
