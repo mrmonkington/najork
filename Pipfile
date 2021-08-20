@@ -11,6 +11,8 @@ jinja2 = "*"
 pyyaml = "*"
 py-expression-eval = "*"
 oscpy = "*"
+python-rtmidi = "*"
+mido = "*"
 
 [dev-packages]
 pytest = "*"
@@ -19,6 +21,7 @@ pylint = "*"
 flake8 = "*"
 ipython = "*"
 pytest-asyncio = "*"
+python-rtmidi = "*"
 
 [requires]
 python_version = "3.9"

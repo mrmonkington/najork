@@ -1,3 +1,7 @@
+get-hacking:
+	# needed for broken lib deps on fedora 34
+	PIP_INSTALL_OPTION="-- --no-jack" pipenv install --dev --skip-lock python-rtmidi
+	pipenv install --dev
 
 flatpak-build:
 	flatpak-builder ./build  com.verynoisy.najork.yml --force-clean
