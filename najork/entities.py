@@ -273,15 +273,15 @@ class Slider(Point, ShapelyProxy):
                  inherit_velocity: bool):
         self._parent: Shape = parent
         """ what are we sliding along? """
-        self.set_position(position) 
+        self.set_position(position)
         """ initially, how far along it are we as a function of length? """
-        self.set_velocity(velocity) 
+        self.set_velocity(velocity)
         """ how fast along it are we moving in length per second units? """
         self.inherit_velocity: float = inherit_velocity
         """ use own velocity or vel defined by parent """
-        self.set_loop(loop) 
-        # what are we sliding along?
-        super().__init__(uid, rank)
+        self.set_loop(loop)
+        Point.__init__(self, uid, rank)
+        ShapelyProxy.__init__(self)
 
     def set_position(self, proc: float):
         """ Sets initial (t=0) position along parent.
@@ -555,13 +555,16 @@ class Bumper(Slider, Control):
         Then find left-right-ness and see if it changes during window
             - interpolate a point on shape, find azimuth and see if it changes
             sign
-        
+
         """
-        # calculate trajectory of point
+        # is point exactly on line?
+        if self._collision_parent.get_impl(t).contains(self.get_impl(t)):
+            return True
+        # does it cross next frame?
+        # first calc trajectory of point
         traj: geos.LineString = geos.LineString((self.get_coords(t),
                                                  self.get_coords(t_next)))
-        # does it cross?
-        if traj.crosses(self._collision_parent.get_impl()):
+        if traj.crosses(self._collision_parent.get_impl(t)):
             return True
         return False
 

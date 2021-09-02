@@ -6,6 +6,7 @@ from najork.entities import (
     Anchor, Line, Slider, Circle, Intersection, Distance,
     Angle, Control, Bumper
 )
+from najork.engine_sched import Engine, CV_FRAME_TIME
 
 def test_anchor():
     p = Anchor("p1",1,(0.0, 0.0))
@@ -246,7 +247,7 @@ def test_control_compound():
     assert c1.msg.get_data(0.0) == approx([0.0, ])  # ||_
     assert c1.msg.get_data(1.0) == approx([sqrt(2.0) / 8.0, ])  # |\_
 
-"""def test_bumper_concrete():
+def test_bumper_concrete_point_moves_surface_static():
     p1 = Anchor("p1", 1, (0.0, 0.0))
     p2 = Anchor("p2", 1, (1.0, 0.0))
     l1 = Line("l1", 2, (p1, p2))
@@ -264,4 +265,18 @@ def test_control_compound():
     b1.msg.set_data([
         "1",
     ])
-"""
+
+    assert b1.test_collision(0.0, 1.0) is True
+
+    assert b1.test_collision(0.0, 0.0 + CV_FRAME_TIME) is False
+    # we need to test that collision is only triggered for a single
+    # frame if the collision occurs t = t1, t < t2 (NOT t <= t2)
+    assert b1.test_collision(0.5 - 2 * CV_FRAME_TIME, 0.5 - CV_FRAME_TIME) is False
+    assert b1.test_collision(0.5 - CV_FRAME_TIME, 0.50) is False
+    assert b1.test_collision(0.5, 0.5 + CV_FRAME_TIME) is True
+    assert b1.test_collision(0.5 - CV_FRAME_TIME/2, 0.50 + CV_FRAME_TIME/2) is True
+    assert b1.test_collision(0.5 + CV_FRAME_TIME, 0.5 + 2 * CV_FRAME_TIME) is False
+
+    assert b1.test_collision(1.0, 1.0 + CV_FRAME_TIME) is False
+
+
