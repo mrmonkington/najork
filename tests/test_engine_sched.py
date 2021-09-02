@@ -6,18 +6,8 @@ from najork.config import DEFAULT_SETTINGS
 import logging
 import time
 
-@pytest.fixture
-def s():
-    return Scene()
-
-@pytest.fixture
-def e(s):
-    eng = Engine(s, DEFAULT_SETTINGS)
-    eng.start()
-    yield eng
-    eng.shutdown()
-
 def test_engine_timing(e):
+    e.start()
     RUNTIME = 1.0
     time.sleep(RUNTIME)
     e.pause()

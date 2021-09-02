@@ -19,7 +19,7 @@ def e(s):
     """ Default engine
     """
     eng = Engine(s, DEFAULT_SETTINGS)
-    eng.start()
+    # eng.start()
     yield eng
     eng.shutdown()
 

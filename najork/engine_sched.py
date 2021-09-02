@@ -52,6 +52,9 @@ class Engine:
         self.setup_osc(settings)
         self.spawn()
 
+    def get_scene(self) -> Scene:
+        return self._scene
+
     def setup_osc(self, settings):
         if (
                 "osc" in settings
@@ -89,7 +92,6 @@ class Engine:
         if self._osc_client is not None:
             logging.debug("Sending OSC message {}={}".format(path, data))
             self._osc_client.send_message(path, data)
-
 
     def _run(self):
         """ Internal thread worker
@@ -177,7 +179,16 @@ class Engine:
         if self._running:
             self._triggers(self._pos)
 
+        logging.debug(" -> Frame time: %f", self._pos)
+
     def _triggers(self, t: float):
+        """ Iterate through all the message sending entities
+        and see if they need to do anything
+        """
         controls = self._scene.list_by_class("control")
         for c in controls:
             self.send_osc_msg(c.msg.get_path(t), c.msg.get_data(t))
+        bumpers = self._scene.list_by_class("bumper")
+        for b in bumpers:
+            if b.test_collision(t, t+CV_FRAME_TIME):
+                self.send_osc_msg(b.msg.get_path(t), b.msg.get_data(t))

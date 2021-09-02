@@ -59,13 +59,20 @@ def y1():
 def y2():
     return load_yaml("simple_2.yml")
 
+@pytest.fixture
+def yb1():
+    return load_yaml("big_1.yml")
+
 def test_load_from_yaml_1(s, y1):
     s.load_from_dict(y1)
     assert len(s._registry) == 1
 
-def test_load_from_yaml_1(s, y2):
+def test_load_from_yaml_2(s, y2):
     s.load_from_dict(y2)
     assert len(s._registry) == 4
     s1 = s.get_by_id("s1")
     assert s1.get_coords(0.0) == approx((100, 100))
     assert s1.get_coords(1.0) == approx((200, 100))
+
+def test_load_from_yaml_big_1(s, yb1):
+    s.load_from_dict(yb1)

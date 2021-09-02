@@ -36,29 +36,15 @@ layers:
     children:
       - entity: circle
         id: c1
-        parent: p0            # origin - could we set this to another point?
+        centre: p0            # origin - could we set this to another point?
         radius: 250
         orientation: 0        # rotation about origin, in order to define zero point for line
         # rotation-speed: 0 - no let's implement as point progression            # rpm (not radians?)
       - entity: circle
         id: c2
-        parent: p0
+        centre: p0
         radius: 150
         orientation: 0
-      - entity: polyline        # could support beziers?!
-        id: pl1
-        parents:
-          - p7
-          - p8
-        midpoints:              # in coord space where p7-p8 is X-axis
-          - [0.1, -0.1]
-          - [0.2, 0.02]
-          - [0.3, -0.05]
-          - [0.4, 0.05]
-          - [0.55, -0.2]
-          - [0.7, 0.05]
-          - [0.8, -0.05]
-          - [0.9, 0.1]
       - entity: line
         id: l1
         parents:
@@ -99,10 +85,6 @@ layers:
         velocity: "1.0/8"       # can this be an expression?
   - rank: 4
     children:
-      - entity: roller
-        id: c3
-        parent: p10
-        rolling_surface: c1
       - entity: line
         id: l4
         parents:
@@ -110,24 +92,6 @@ layers:
           - p10
   - rank: 5
     children:
-      - entity: slider
-        id: p13
-        parent: c3
-        progression: 0.66
-        velocity: inherit               # use parent's default_child_velocity
-      - entity: bumper
-        id: e1
-        parent: c3
-        progression: 0.66
-        collides: c1 # TODO multiple
-        velocity: inherit
-        msg: "/bip/A#3/50"
-        inputs: []
-      - entity: intersection
-        id: i1
-        parents:
-          - l2
-          - pl1
       - entity: intersection
         id: i2
         parents:
@@ -135,11 +99,6 @@ layers:
           - l4
   - rank: 6
     children:
-      - entity: distance
-        id: dist1
-        parents:
-          - p12
-          - i1
       - entity: distance
         id: dist2
         parents:
@@ -167,5 +126,5 @@ layers:
           - "in_1"
 #          - "t"       # current time t available in all contexts
         connections:
-          in_1: dist1
+          in_1: dist2
         coords: [1050, 700]

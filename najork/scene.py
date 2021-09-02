@@ -17,7 +17,8 @@ any re-entrancy concerns.
 # TODO ensure caching is similarly thread safe
 
 from .entities import (
-    Entity, Anchor, Line, Slider, Circle, Intersection, Distance, Angle
+    Entity, Anchor, Line, Slider, Circle, Intersection,
+    Distance, Angle, Control, Bumper
 )
 
 from collections import defaultdict
@@ -105,18 +106,18 @@ class Scene():
         x angle
         x circle
         x distance
-        bumper
+        x bumper
         x slider
         x intersection
         x line
         x point
         polyline
-        port
+        x control
         roller
         """
         for rank in scene_def["layers"]:
             for e in rank["children"]:
-                entity = None
+                entity: Entity = None
 
                 if e["entity"] == "point":
                     entity = Anchor(e["id"], rank["rank"], tuple(e["coords"]))
@@ -160,6 +161,37 @@ class Scene():
                     p2 = self.get_by_id(e["parents"][1])
                     entity = Distance(e["id"], rank["rank"],
                                       [p1, p2])
+
+                elif e["entity"] == "control":
+                    entity = Control(e["id"], rank["rank"],
+                                     e["coords"][0], e["coords"][1],
+                                     e["path"]
+                                     )
+                    for connection, input_id in e.get("connections", {}).items():
+                        entity.add_input(connection, self.get_by_id(input_id))
+                    entity.msg.set_data(e.get("data", []))
+
+                elif e["entity"] == "bumper":
+                    p1 = self.get_by_id(e["parent"])
+                    c1 = self.get_by_id(e["collides"])
+                    inherit_vel: bool = True
+                    vel: float = 0.0
+                    if type(e["velocity"]) == str and e["velocity"] == "inherit":
+                        inherit_vel = True
+                    else:
+                        vel = float(e["velocity"])
+                    entity = Control(e["id"], rank["rank"],
+                                     p1,
+                                     e["progression"], vel,
+                                     c1,
+                                     e["path"],
+                                     e.get("loop", False),
+                                     inherit_vel
+                                     )
+                    for connection, input_id in e.get("connections", {}).items():
+                        entity.add_input(connection, self.get_by_id(input_id))
+                    entity.msg.set_data(e.get("data", []))
+
 
                 else:
                     raise InputError(

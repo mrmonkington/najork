@@ -8,7 +8,10 @@ from najork.engine_sched import Engine, CV_FRAME_TIME
 from najork.scene import Scene
 from najork.config import DEFAULT_SETTINGS
 
-from najork.entities import Control
+from najork.entities import (
+    Anchor, Line, Slider, Circle, Intersection, Distance,
+    Angle, Control, Bumper
+)
 
 import time
 
@@ -33,14 +36,35 @@ def test_expr():
     d = c.get_data(1.0)
     assert d == approx((5.0, "monk"))
 
+"""
 
-def test_engine_static_messages(s, e, osccount):
-    a1 = s.create_entity(Control, 0.0, 0.0, b"/bums")
+def test_engine_bumps(s, e, oscmsg):
+    p1 = s.create_entity(Anchor, (0.0, 0.0))
+    p2 = s.create_entity(Anchor, (1.0, 0.0))
+    l1 = s.create_entity(Line, (p1, p2))
 
+    p3 = s.create_entity(Anchor, (0.5, 1.0))
+    p4 = s.create_entity(Anchor, (0.5, -1.0))
+
+    l2 = s.create_entity(Line, (p3, p4))
+
+    b1 = s.create_entity(
+        Bumper,
+        l1, 0.0, 1.0,
+        l2, b"/bump",
+        loop=False, inherit_velocity=False
+    )
+
+    b1.msg.set_data([
+        "1",
+    ])
+
+    e.start()
     RUNTIME = 1.0
     time.sleep(RUNTIME)
     e.pause()
     t = e.pos
-    # we want tick clock to match real elapsed time
-    assert osccount["count"] == 24
-"""
+    # shoulda got a bump
+    assert t == approx(RUNTIME)
+    assert oscmsg["path"] == b"/bump"
+    assert oscmsg["values"] == (1,)
