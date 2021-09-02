@@ -16,9 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import pdb
 
 VERSION = '0.1'
 
 if __name__ == '__main__':
     from najork import main
-    sys.exit(main.main(VERSION))
+    #pdb.set_trace()
+    #pdb.run('main.main(VERSION)')
+    main.main(VERSION)

@@ -165,7 +165,7 @@ class Scene():
                 elif e["entity"] == "control":
                     entity = Control(e["id"], rank["rank"],
                                      e["coords"][0], e["coords"][1],
-                                     e["path"]
+                                     e["path"].encode()
                                      )
                     for connection, input_id in e.get("connections", {}).items():
                         entity.add_input(connection, self.get_by_id(input_id))
@@ -184,7 +184,7 @@ class Scene():
                                      p1,
                                      e["progression"], vel,
                                      c1,
-                                     e["path"],
+                                     e["path"].encode(),
                                      e.get("loop", False),
                                      inherit_vel
                                      )

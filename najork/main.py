@@ -23,6 +23,8 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Gio
 
+import yaml
+
 from .window import NajorkWindow
 from .scene import Scene
 from .engine_sched import Engine
@@ -36,11 +38,15 @@ RENDER_FRAME_TIME = 1.0 / 24.0 # let's do PAL for now
 class Application(Gtk.Application):
     def __init__(self):
         super().__init__(application_id='com.verynoisy.najork',
-                         flags=Gio.ApplicationFlags.FLAGS_NONE)
+                         flags=Gio.ApplicationFlags.HANDLES_OPEN)
         self.connect("shutdown", self.on_quit)
+        self.connect("open", self.app_open)
         self.scene = Scene()
         self.engine = Engine(self.scene, DEFAULT_SETTINGS)
         self.window = None
+
+
+        # self.add_main_option("lint", "l", str, "Lint input file, then exit", None)
 
     def on_quit(self, *args):
         self.engine.pause()
@@ -52,6 +58,41 @@ class Application(Gtk.Application):
             self.window = NajorkWindow(engine=self.engine, application=self)
         self.window.present()
         #self.engine.start()
+
+#    def do_command_line(self, args):
+#        Gtk.Application.do_command_line(self, args)
+#        return 0
+#        options = args.get_options_dict()
+#        # convert GVariantDict -> GVariant -> dict
+#        options = options.end().unpack()
+#
+#        if "test" in options:
+#            # This is printed on the main instance
+#            print("Test argument recieved: %s" % options["test"])
+#
+#        self.activate()
+#        return 0
+
+    def app_open(self, app, files, n_files, hint):
+        import time
+        logging.debug("Opening file")
+        f = files[0]
+        f.load_contents_async(None, self.load_file, None)
+        self.activate()
+
+    def load_file(self, source, result, user_data):
+        print("file loaded")
+        success, content, nb = source.load_contents_finish(result)
+        self.start_session(content)
+
+    def start_session(self, content: str):
+        self.engine.pause()
+        self.engine.shutdown()
+        scene_def: dict = yaml.load(content, Loader=yaml.Loader)
+        self.scene = Scene()
+        self.scene.load_from_dict(scene_def)
+        self.engine = Engine(self.scene, DEFAULT_SETTINGS)
+        self.window.engine = self.engine
 
 
 def main(version):
