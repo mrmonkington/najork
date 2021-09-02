@@ -127,6 +127,8 @@ class Scene():
                     p2 = self.get_by_id(e["parents"][1])
                     entity = Line(e["id"], rank["rank"], [p1, p2])
 
+                    # TODO default_child_velocity
+
                 elif e["entity"] == "circle":
                     p1 = self.get_by_id(e["centre"])
                     entity = Circle(e["id"],
@@ -134,6 +136,8 @@ class Scene():
                                     p1,
                                     e["radius"],
                                     e["orientation"])
+
+                    # TODO default_child_velocity
 
                 elif e["entity"] == "slider":
                     par = self.get_by_id(e["parent"])

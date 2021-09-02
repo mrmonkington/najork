@@ -68,7 +68,8 @@ layers:
         coords:
           - 0.9                   # x w.r.t to line as coordinate system (in this case circumferal)
           - 0.0                   # y w.r.t to line (in this case radial offset, positive = outwards)
-        velocity: 0.1           # expressed in parent length (e.g. circumference) per measure (clockwise for circles)
+        velocity: 1.0           # expressed in parent length (e.g. circumference) per measure (clockwise for circles)
+        loop: true
       - entity: slider
         id: p11
         parent: l1
@@ -123,7 +124,7 @@ layers:
         id: ctrl2
         path: "/note/pitch/"
         data:
-          - "in_1"
+          - "in_1 / 10"
 #          - "t"       # current time t available in all contexts
         connections:
           in_1: dist2
