@@ -2,6 +2,6 @@
 layers:
   - rank: 1
     children:
-      - entity: point
+      - entity: anchor
         id: p0
         coords: [100, 100]

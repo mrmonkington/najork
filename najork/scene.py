@@ -119,7 +119,7 @@ class Scene():
             for e in rank["children"]:
                 entity: Entity = None
 
-                if e["entity"] == "point":
+                if e["entity"] == "anchor":
                     entity = Anchor(e["id"], rank["rank"], tuple(e["coords"]))
 
                 elif e["entity"] == "line":

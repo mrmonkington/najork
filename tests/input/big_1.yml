@@ -3,42 +3,42 @@
 # on lower ranked layers only
 measure-duration: 2.0         # 2s = 1 bar at 120bpm (though we don't *do* bpm)
 layers:
-  - rank: 1                   # all static points should live here
+  - rank: 1                   # all static anchors should live here
     children:
-      - entity: point           # for circle origin
+      - entity: anchor           # for circle origin
         id: p0
         coords: [300, 600]    # TL = [0,0]
-      - entity: point
+      - entity: anchor
         id: p1
         coords: [1100, 200]
-      - entity: point
+      - entity: anchor
         id: p2
         coords: [1150, 500]
-      - entity: point
+      - entity: anchor
         id: p3
         coords: [700, 700]
-      - entity: point
+      - entity: anchor
         id: p4
         coords: [1400, 700]
-      - entity: point
+      - entity: anchor
         id: p5
         coords: [700, 1000]
-      - entity: point
+      - entity: anchor
         id: p6
         coords: [1400, 1000]
-      - entity: point           # for polyline
+      - entity: anchor           # for polyline
         id: p7
         coords: [650, 950]
-      - entity: point
+      - entity: anchor
         id: p8
         coords: [1400, 850]
   - rank: 2
     children:
       - entity: circle
         id: c1
-        centre: p0            # origin - could we set this to another point?
+        centre: p0            # origin - could we set this to another anchor?
         radius: 250
-        orientation: 0        # rotation about origin, in order to define zero point for line
+        orientation: 0        # rotation about origin, in order to define zero anchor for line
         # rotation-speed: 0 - no let's implement as point progression            # rpm (not radians?)
       - entity: circle
         id: c2
@@ -62,7 +62,7 @@ layers:
           - p2
   - rank: 3
     children:
-      - entity: slider        # subclasses point
+      - entity: slider        # subclasses anchor
         id: p10
         parent: c2
         coords:

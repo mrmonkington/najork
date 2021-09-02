@@ -2,10 +2,10 @@
 layers:
   - rank: 1
     children:
-      - entity: point
+      - entity: anchor
         id: p0
         coords: [100, 100]
-      - entity: point
+      - entity: anchor
         id: p1
         coords: [200, 100]
   - rank: 2
