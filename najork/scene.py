@@ -82,6 +82,9 @@ class Scene():
         """
         return self._registry[uid]
 
+    def all(self):
+        return self._registry.values()
+
     def list_by_class(self, classname: str):
         """ List all entities registered for a given entity class
         """
@@ -98,7 +101,7 @@ class Scene():
         """
         # TODO presort
         return sorted(self._registry.values(),
-                      lambda x: x.rank)
+                      key=lambda x: x.rank)
 
     def load_from_dict(self, scene_def: dict):
         """ Build a scene from dict `scene_def` parsed from YAML
@@ -110,7 +113,7 @@ class Scene():
         x slider
         x intersection
         x line
-        x point
+        x anchor
         polyline
         x control
         roller
@@ -163,7 +166,7 @@ class Scene():
                 elif e["entity"] == "angle":
                     p1 = self.get_by_id(e["parents"][0])
                     p2 = self.get_by_id(e["parents"][1])
-                    entity = Distance(e["id"], rank["rank"],
+                    entity = Angle(e["id"], rank["rank"],
                                       [p1, p2])
 
                 elif e["entity"] == "control":

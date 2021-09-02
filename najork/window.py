@@ -22,9 +22,9 @@ gi.require_foreign('cairo')
 from gi.repository import Gtk, GLib
 
 import cairo
-
 import logging
-logging.basicConfig(level=logging.DEBUG)
+
+from .renderer import render
 
 @Gtk.Template(filename='najork/window.ui')
 class NajorkWindow(Gtk.ApplicationWindow):
@@ -38,24 +38,29 @@ class NajorkWindow(Gtk.ApplicationWindow):
         super().__init__(**kwargs)
         self.engine = engine
         self.main_canvas.add_tick_callback(self.tick)
-        self.main_canvas.set_draw_func(self.testDraw, {}, None)
+        self.main_canvas.set_draw_func(self.draw_scene, {}, None)
         self.play_button.connect("clicked", self.on_playpause)
         self.rewind_button.connect("clicked", self.on_rewind)
 
     def tick(self, widg, frame_clock, **kwargs):
         #print("tick %i" % (frame_clock.get_frame_time(),))
         #self.testDraw(widg, frame_clock)
-        widg.queue_draw()
+        if self.engine.running:
+            widg.queue_draw()
         return GLib.SOURCE_CONTINUE
 
-    def testDraw(self, da, ctx, width, height, *args):
-        #logging.debug("Width %i, height %i", width, height)
-        ctx.scale(width, height)
-        ctx.set_source_rgb(0.0, 0.0, 0.0)
-        ctx.set_line_width(0.1)
-        ctx.move_to(0.0+self.engine.pos, 0)
-        ctx.line_to(1.0-self.engine.pos, 1)
-        ctx.stroke()
+    def draw_scene(self, da, ctx, width, height, *args):
+        logging.debug("Width %i, height %i", width, height)
+        # TODO get scene bounds
+        da.set_content_width(1920)
+        da.set_content_height(1280)
+        render(self.engine.get_scene(), self.engine.pos, ctx)
+        #ctx.scale(width, height)
+        #ctx.set_source_rgb(0.0, 0.0, 0.0)
+        #ctx.set_line_width(0.1)
+        #ctx.move_to(0.0+self.engine.pos, 0)
+        #ctx.line_to(1.0-self.engine.pos, 1)
+        #ctx.stroke()
 
     def on_playpause(self, widg, *args):
         logging.debug("Active? %s", widg.get_active())

@@ -13,9 +13,7 @@ of OSC packets and not spend too long burning CPU in a python loop.
 import sched
 import threading
 import time
-
 import logging
-logging.basicConfig(level=logging.DEBUG)
 
 from .scene import Scene
 
@@ -37,6 +35,10 @@ class Engine:
         else:
             # just ignore - should we error?
             pass
+
+    @property
+    def running(self):
+        return self._running
 
     def __init__(self, scene: Scene, settings: dict):
         self._scene = scene

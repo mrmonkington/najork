@@ -105,8 +105,8 @@ class Entity(ABC):
         self._rank = rank
 
 
-    # TODO: @abstractmethod
-    def get_representation(self, t: float):
+    @abstractmethod
+    def get_repr(self, t: float):
         """ Returns a shape to be rendered by view
         """
 
@@ -165,6 +165,11 @@ class Point(Entity):
         x, y = self.get_coords(t)
         return ((x-BOUND_TOLERANCE, y-BOUND_TOLERANCE),
                 (x+BOUND_TOLERANCE, y+BOUND_TOLERANCE))
+
+    def get_repr(self, t: float):
+        """ Returns a shape to be rendered by view
+        """
+        return self.get_coords(t)
 
 
 class Anchor(Point, ShapelyConcrete):
@@ -362,11 +367,21 @@ class Line(Shape):
     def get_dependencies(self) -> list['Entity']:
         return self._parents
 
+    def get_repr(self, t: float):
+        """ Returns a shape to be rendered by view
+        """
+        return self._parents[0].get_coords(t) + self._parents[1].get_coords(t)
+
 
 class PolyLine(Shape):
     """_parents: tuple[Point, Point]
     _impl: geos.LineString
     """
+
+    def get_repr(self, t: float):
+        """ Returns a shape to be rendered by view
+        """
+        return self._parents[0].get_coords(t) + self._parents[1].get_coords(t)
 
 
 class Circle(Shape):
@@ -409,6 +424,11 @@ class Circle(Shape):
         """
         return [self._centre, ]
 
+    def get_repr(self, t: float):
+        """ Returns a shape to be rendered by view
+        """
+        return self._centre.get_coords(t) + (self._radius, )
+
 
 class Roller(Circle):
     """ I can't remember how this works
@@ -416,6 +436,11 @@ class Roller(Circle):
     """
     #_rolling_surface: Shape = None
     #_rolling_ang_vel: float = 0.0
+
+    def get_repr(self, t: float):
+        """ Returns a shape to be rendered by view
+        """
+        return self._parents[0].get_coords(t) + (self._radius, )
 
 
 class Measurement(Entity):
@@ -454,6 +479,12 @@ class Angle(Measurement):
         mx, my, Mx, My = ml.bounds
         return ((mx, my), (Mx, My))
 
+    def get_repr(self, t: float):
+        """ Returns a shape to be rendered by view
+        """
+        # TODO TODO TODO
+        return self._parents[0].get_impl(t), self._parents[1].get_impl(t)
+
 
 class Distance(Measurement):
     """_parents: tuple[Point, Point]
@@ -463,6 +494,10 @@ class Distance(Measurement):
         if len(parents) != 2:
             raise ImpossibleGeometry("Distance can only be measured between"
                                      "two Points")
+        if any(not isinstance(el, Point) for el in parents):
+            raise ImpossibleGeometry("Distance can only be measured between"
+                                     "types of Point, e.g. anchors, "
+                                     "not other things")
         self._parents = parents
         super().__init__(guid, rank)
 
@@ -481,6 +516,20 @@ class Distance(Measurement):
         mx, my = self._parents[0].get_coords(t)
         Mx, My = self._parents[1].get_coords(t)
         return ((mx, my), (Mx, My))
+
+    def get_repr(self, t: float):
+        """ A line offset slightly with a midpoint
+        """
+        offset = geos.LineString((self._parents[0].get_coords(t),
+                                  self._parents[1].get_coords(t))
+                                 ).parallel_offset(20, 'left')
+        return (
+            offset.interpolate(0.5, True).coords[0] 
+            + offset.coords[0] + offset.coords[1]
+        )
+
+        #return self._parents[0].get_coords(t) + self._parents[1].get_coords(t)
+
 
 class Control(Entity):
 
@@ -515,10 +564,10 @@ class Control(Entity):
             k: v.get_value(t) for (k, v) in self._inputs.items()
         }
 
-    def get_representation(self, t: float):
+    def get_repr(self, t: float):
         """ Returns a shape to be rendered by view
         """
-        # some sort of point
+        return (self._x, self._y, [p.get_repr(t) for k, p in self._inputs.items()])
 
     def get_bounds(self, t: float) -> tuple[XY, XY]:
         return ((self._x-BOUND_TOLERANCE, self._y-BOUND_TOLERANCE),

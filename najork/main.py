@@ -21,7 +21,7 @@ import sys
 import gi
 
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gio
+from gi.repository import Gtk, Gio, GLib
 
 import yaml
 
@@ -31,7 +31,7 @@ from .engine_sched import Engine
 
 from najork.config import DEFAULT_SETTINGS
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 RENDER_FRAME_TIME = 1.0 / 24.0 # let's do PAL for now
 
@@ -44,6 +44,14 @@ class Application(Gtk.Application):
         self.scene = Scene()
         self.engine = Engine(self.scene, DEFAULT_SETTINGS)
         self.window = None
+        self.add_main_option(
+            "debug",
+            ord("d"),
+            GLib.OptionFlags.NONE,
+            GLib.OptionArg.NONE,
+            "Verbose output",
+            None,
+        )
 
 
         # self.add_main_option("lint", "l", str, "Lint input file, then exit", None)
@@ -81,7 +89,6 @@ class Application(Gtk.Application):
         self.activate()
 
     def load_file(self, source, result, user_data):
-        print("file loaded")
         success, content, nb = source.load_contents_finish(result)
         self.start_session(content)
 
@@ -96,5 +103,12 @@ class Application(Gtk.Application):
 
 
 def main(version):
+    def has_option(*options):
+        return any(o in sys.argv for o in options)
+
+    if has_option("-d", "--debug"):
+        logging.basicConfig(level=logging.DEBUG)
+
+
     app = Application()
     return app.run(sys.argv)

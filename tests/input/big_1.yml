@@ -36,9 +36,9 @@ layers:
     children:
       - entity: circle
         id: c1
-        centre: p0            # origin - could we set this to another anchor?
+        centre: p0
         radius: 250
-        orientation: 0        # rotation about origin, in order to define zero anchor for line
+        orientation: 0
         # rotation-speed: 0 - no let's implement as point progression            # rpm (not radians?)
       - entity: circle
         id: c2
@@ -62,28 +62,22 @@ layers:
           - p2
   - rank: 3
     children:
-      - entity: slider        # subclasses anchor
+      - entity: slider
         id: p10
         parent: c2
-        coords:
-          - 0.9                   # x w.r.t to line as coordinate system (in this case circumferal)
-          - 0.0                   # y w.r.t to line (in this case radial offset, positive = outwards)
-        velocity: 1.0           # expressed in parent length (e.g. circumference) per measure (clockwise for circles)
+        progression: 0.9
+        velocity: 1.0
         loop: true
       - entity: slider
         id: p11
         parent: l1
-        coords:
-          - 0.0
-          - 0.0
-        velocity: "1.0/8"       # can this be an expression?
+        progression: 0.0
+        velocity: 0.125
       - entity: slider
         id: p12
         parent: l2
-        coords:
-          - 0.0
-          - 0.0
-        velocity: "1.0/8"       # can this be an expression?
+        progression: 0.0
+        velocity: 0.125
   - rank: 4
     children:
       - entity: line
@@ -91,6 +85,11 @@ layers:
         parents:
           - p2
           - p10
+      - entity: line
+        id: l5
+        parents:
+          - p11
+          - p12
   - rank: 5
     children:
       - entity: intersection
@@ -112,20 +111,19 @@ layers:
           - l3
   - rank: 7
     children:
-      - entity: control                     # msg sent at global clock rate (configure this?)
-        id: ctrl1
-        path: "/filter/cutoff/"
-        data:
-          - "in_1 * 0.2"  # can evaluate simple expressions using https://github.com/AxiaCore/py-expression-eval/
-        connections:
-          in_1: ang1
-        coords: [750, 200]
+#      - entity: control                     # msg sent at global clock rate (configure this?)
+#        id: ctrl1
+#        path: "/filter/cutoff/"
+#        data:
+#          - "in_1 * 0.2"  # can evaluate simple expressions using https://github.com/AxiaCore/py-expression-eval/
+#        connections:
+#          in_1: ang1
+#        coords: [1050, 700]
       - entity: control
         id: ctrl2
         path: "/note/pitch/"
         data:
           - "in_1 / 10"
-#          - "t"       # current time t available in all contexts
         connections:
           in_1: dist2
-        coords: [1050, 700]
+        coords: [750, 200]
