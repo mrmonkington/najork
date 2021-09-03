@@ -181,13 +181,13 @@ class Scene():
                 elif e["entity"] == "bumper":
                     p1 = self.get_by_id(e["parent"])
                     c1 = self.get_by_id(e["collides"])
-                    inherit_vel: bool = True
+                    inherit_vel: bool = False
                     vel: float = 0.0
                     if type(e["velocity"]) == str and e["velocity"] == "inherit":
                         inherit_vel = True
                     else:
                         vel = float(e["velocity"])
-                    entity = Control(e["id"], rank["rank"],
+                    entity = Bumper(e["id"], rank["rank"],
                                      p1,
                                      e["progression"], vel,
                                      c1,

@@ -52,6 +52,14 @@ class Application(Gtk.Application):
             "Verbose output",
             None,
         )
+        self.add_main_option(
+            "start",
+            ord("s"),
+            GLib.OptionFlags.NONE,
+            GLib.OptionArg.NONE,
+            "Start engine immediately",
+            None,
+        )
 
 
         # self.add_main_option("lint", "l", str, "Lint input file, then exit", None)
@@ -65,7 +73,6 @@ class Application(Gtk.Application):
         if not self.window:
             self.window = NajorkWindow(engine=self.engine, application=self)
         self.window.present()
-        #self.engine.start()
 
 #    def do_command_line(self, args):
 #        Gtk.Application.do_command_line(self, args)
@@ -100,11 +107,14 @@ class Application(Gtk.Application):
         self.scene.load_from_dict(scene_def)
         self.engine = Engine(self.scene, DEFAULT_SETTINGS)
         self.window.engine = self.engine
+        if has_option("-s", "--start"):
+            logging.debug("starting")
+            self.engine.start()
 
+def has_option(*options):
+    return any(o in sys.argv for o in options)
 
 def main(version):
-    def has_option(*options):
-        return any(o in sys.argv for o in options)
 
     if has_option("-d", "--debug"):
         logging.basicConfig(level=logging.DEBUG)

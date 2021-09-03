@@ -301,6 +301,13 @@ class Slider(Point, ShapelyProxy):
         """
         self._velocity = velocity
 
+    @property
+    def velocity(self):
+        return self._velocity
+    @property
+    def loop(self):
+        return self._loop
+
     def set_loop(self, loop: bool):
         self._loop = loop
 
@@ -621,5 +628,10 @@ class Bumper(Slider, Control):
         """ Returns list of other entities this one depends on
         """
         return [self._parent, self._collision_parent]
+
+    def get_repr(self, t: float):
+        """ Own coords plus reps of all colliders
+        """
+        return self.get_coords(t) + ([self._collision_parent.get_repr(t),],)
 
 

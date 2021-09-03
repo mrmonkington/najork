@@ -10,6 +10,7 @@ from .entities import (
 
 POINT_SIZE = 10
 
+# rgbeegees
 THEME = {
     Anchor: (0.5, 0.5, 0.5),
     Slider: (1.0, 232/255, 17/255),
@@ -17,6 +18,7 @@ THEME = {
     Line: (233/255, 45/255, 0.0),
     Control: (1.0, 127/255, 42/255),
     Distance: (15/255, 171/255, 0.0),
+    Bumper: (17/255, 162/255, 1.0),
 }
 
 def render(scn: Scene, t: float, ctx):
@@ -31,14 +33,14 @@ def render_entity(e, t: float, ctx):
     (order something else, we don't care)
     angle
     x circle
-    distance
-    bumper
+    x distance
+    x bumper
     x slider
     intersection
-    line
+    x line
     x anchor
     polyline
-    control
+    x control
     roller
     """
 
@@ -68,6 +70,29 @@ def render_entity(e, t: float, ctx):
         stops = [(x+10*math.cos(s), y+10*math.sin(s))
                  for s in (math.pi * (-0.5 + 2/5 * s)
                            for s in range(0, 5))]
+        ctx.move_to(*stops[0])
+        for stop in stops[1:]:
+            ctx.line_to(stop[0], stop[1])
+        ctx.close_path()
+        ctx.stroke()
+
+        for inp in inps:
+            ctx.move_to(x, y)
+            ctx.set_dash((5, 5))
+            ctx.line_to(inp[0], inp[1])
+            ctx.set_dash((5,))
+            ctx.stroke()
+            ctx.set_dash(())
+
+    elif type(e) is Bumper:
+        ctx.set_source_rgb(*THEME[type(e)])
+        ctx.set_line_width(1.0)
+        x, y, inps = e.get_repr(t)
+        # little star
+        stops = [(x+(5 * (s%2+1))*math.cos(r), y+(5 * (s%2+1))*math.sin(r))
+                 for r, s in ((math.pi * (-0.5 + 2/10 * s), s)
+                              for s in range(0, 10))]
+
         ctx.move_to(*stops[0])
         for stop in stops[1:]:
             ctx.line_to(stop[0], stop[1])
