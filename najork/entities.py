@@ -304,6 +304,13 @@ class Slider(Point, ShapelyProxy):
     @property
     def velocity(self):
         return self._velocity
+
+    @property
+    def effective_velocity(self):
+        if self.inherit_velocity:
+            return self._parent.default_child_velocity
+        return self._velocity
+
     @property
     def loop(self):
         return self._loop
@@ -316,11 +323,7 @@ class Slider(Point, ShapelyProxy):
         using initial position and velocity. (Wraps)
         """
         # TODO accuracy implication from wrapping?
-        if self.inherit_velocity:
-            v = self._parent.default_child_velocity
-        else:
-            v = self._velocity
-
+        v = self.effective_velocity
         if self._loop:
             return self._parent.calc_position_xy(
                 t,
@@ -331,6 +334,14 @@ class Slider(Point, ShapelyProxy):
                 t,
                 clamp(self._position + v * t)
             )
+
+    def check_wraps(self, t: float, t_next: float):
+        v = self.effective_velocity
+        if self._loop:
+            if not ((self._position + v * t) // 1
+                    == (self._position + v * t_next) // 1):
+                return True
+        return False
 
     def get_dependencies(self) -> list[Entity]:
         """ Returns list of other entities this one depends on
@@ -612,10 +623,17 @@ class Bumper(Slider, Control):
             - interpolate a point on shape, find azimuth and see if it changes
             sign
 
+        OR
+        see algo in docs/modelling/
+
         """
         # is point exactly on line?
         if self._collision_parent.get_impl(t).contains(self.get_impl(t)):
             return True
+        if self.check_wraps(t, t_next):
+            # wrapping is basically teleporting
+            # if it passes through a line in doing so it's not a collision
+            return False
         # does it cross next frame?
         # first calc trajectory of point
         traj: geos.LineString = geos.LineString((self.get_coords(t),

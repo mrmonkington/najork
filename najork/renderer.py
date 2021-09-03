@@ -8,6 +8,8 @@ from .entities import (
     Distance, Angle, Control, Bumper
 )
 
+from .engine_sched import CV_FRAME_TIME
+
 POINT_SIZE = 10
 
 # rgbeegees
@@ -25,7 +27,7 @@ def render(scn: Scene, t: float, ctx):
     ctx.scale(1.0, 1.0)
     ctx.set_source_rgb(0.0, 0.0, 0.0)
 
-    for e in scn.all():
+    for e in scn.sort_by_rank():
         render_entity(e, t, ctx)
 
 def render_entity(e, t: float, ctx):
@@ -97,7 +99,10 @@ def render_entity(e, t: float, ctx):
         for stop in stops[1:]:
             ctx.line_to(stop[0], stop[1])
         ctx.close_path()
-        ctx.stroke()
+        if e.test_collision(t, t+CV_FRAME_TIME):
+            ctx.fill()
+        else:
+            ctx.stroke()
 
         for inp in inps:
             ctx.move_to(x, y)
