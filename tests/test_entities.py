@@ -3,7 +3,7 @@ from pytest import approx
 import logging
 
 from najork.entities import (
-    Anchor, Line, Slider, Circle, Intersection, Distance,
+    Anchor, Line, PolyLine, Slider, Circle, Intersection, Distance,
     Angle, Control, Bumper
 )
 from najork.engine_sched import Engine, CV_FRAME_TIME
@@ -32,6 +32,45 @@ def test_anchored_circle():
         assert c1.calc_position_xy(t/10.0, 1.0) == approx((2.0, 1.0))
         assert c1.calc_position_xy(t/10.0, 0.5) == approx((0.0, 1.0))
 
+def test_anchored_unit_polyline():
+    p1 = Anchor("p1",1,(0.0, 0.0))
+    p2 = Anchor("p2",1,(1.0, 0.0))
+    # make symmetrical to simplify manual point calcs
+    mids = [
+        (0.5, 0.5),
+    ]
+    l1 = PolyLine("l1", 2, (p1, p2), mids)
+    for t in range(0, 11):
+        # should be invariant
+        assert l1.calc_position_xy(t/10.0, 0.0) == approx((0.0, 0.0))
+        assert l1.calc_position_xy(t/10.0, 1.0) == approx((1.0, 0.0))
+
+        # mid point
+        assert l1.calc_position_xy(t/10.0, 0.5) == approx((0.5, 0.5))
+
+        # interpolate
+        assert l1.calc_position_xy(t/10.0, 0.25) == approx((0.25, 0.25))
+        assert l1.calc_position_xy(t/10.0, 0.75) == approx((0.75, 0.25))
+
+def test_anchored_nonunit_polyline():
+    p1 = Anchor("p1",1,(0.0, 0.0))
+    p2 = Anchor("p2",1,(2.0, 0.0))
+    mids = [
+        (0.25, 0.5),
+        (0.5, 0.0),
+        (0.75, -0.5),
+    ]
+    l1 = PolyLine("l1", 2, (p1, p2), mids)
+    for t in range(0, 11):
+        # should be invariant
+        assert l1.calc_position_xy(t/10.0, 0.0) == approx((0.0, 0.0))
+        assert l1.calc_position_xy(t/10.0, 1.0) == approx((2.0, 0.0))
+        # @ mid points
+        assert l1.calc_position_xy(t/10.0, 0.5) == approx((1.0, 0.0))
+
+        # interpolate
+        assert l1.calc_position_xy(t/10.0, 0.05) == approx((0.1, 0.2))
+        assert l1.calc_position_xy(t/10.0, 0.95) == approx((1.9, -0.2))
 
 def test_anchored_intersection():
     p1 = Anchor("p1",1,(0.0, 1.0))

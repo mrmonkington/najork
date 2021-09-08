@@ -25,9 +25,10 @@ TODO probably Numpy all of this.
 from abc import ABC, abstractmethod
 from shapely import geometry as geos
 from shapely import ops as geops
+from shapely import affinity
 
 from .osc import TemplatedMessage
-from math import atan2, degrees, pi as PI
+from math import atan2, degrees, pi as PI, sqrt
 
 XY = tuple[float, float]
 
@@ -48,8 +49,16 @@ def clamp(v: float, m=0.0, M=1.0) -> float:
     return min(max(m, v), M)
 
 
-def angle(line: geos.LineString) -> float:
-    """ Computer angle of line in
+def XY_angle(s: XY, e: XY) -> float:
+    """ Compute angle of line in rads
+    """
+    dy = e[1] - s[1]
+    dx = e[0] - s[0]
+
+    return atan2(dy, dx)
+
+def najorkle(line: geos.LineString) -> float:
+    """ Compute special najork angle of line in
     revolutions (1 rev = 360 degrees)
     """
     s = line.coords[0]
@@ -57,7 +66,7 @@ def angle(line: geos.LineString) -> float:
     dy = e[1] - s[1]
     dx = e[0] - s[0]
 
-    return (atan2(dy, dx))/(PI*2)
+    return atan2(dy, dx)/PI/2
 
 
 class ImpossibleGeometry(Exception):
@@ -360,8 +369,8 @@ class Line(Shape):
     """ A line *segment*
     """
 
-    _parents: tuple[Point, Point] = None
-    _impl: geos.LineString = None
+    #_parents: tuple[Point, Point] = None
+    #_impl: geos.LineString = None
 
     def __init__(self, uid:str, rank:int, endpoints: tuple[Point, Point],
                  **kwargs):
@@ -394,12 +403,72 @@ class Line(Shape):
 class PolyLine(Shape):
     """_parents: tuple[Point, Point]
     _impl: geos.LineString
+
+    PolyLine is what you probably expect it is, except the mid-points
+    are expressed in a coordinate space with the line endpoints forming
+    a unit X-axis, and Y axis rotated accordingly.
+
+    This is broadly compatible with how circle sliders are defined and
+    makes it easy to:
+      - create a graphical score with points at known rhythmic or tonal
+      divisions
+      - make the whole thing scalable - just move the endpoint
+
+    It does make calculating the line a little trickier - my approach
+    is to create a 'seed' unit implementation using the raw mid points
+    and with normalised endpoints (0 and 1 x) and then apply 
+    a matrix for each impl request
     """
+
+    def __init__(self, uid: str, rank: int,
+                 endpoints: tuple[Point, Point],
+                 midpoints: list[XY],
+                 **kwargs):
+
+        if endpoints[0] == endpoints[1]:
+            raise ImpossibleGeometry("Line endpoints are the same point")
+        self._parents = endpoints
+        self._midpoints = midpoints
+        self._impl_seed = geos.LineString(
+            [[0.0, 0.0], ] +
+            midpoints +
+            [[1.0, 0.0], ]
+        )
+        """ a 'seed' polystring that can be scaled, rotated and translated
+        in order to give true polystring
+        """
+        super().__init__(uid, rank, **kwargs)
+
+    @property
+    def start(self):
+        # optimised for lines
+        return self._parents[0]
+
+    def get_dependencies(self) -> list['Entity']:
+        return self._parents
 
     def get_repr(self, t: float):
         """ Returns a shape to be rendered by view
         """
         return self._parents[0].get_coords(t) + self._parents[1].get_coords(t)
+
+    def get_impl(self, t: float):
+        """ Return a shapely linestring by transforming the seed
+            Probably bit heavy to do a lot
+            TODO - cache this!
+        """
+
+        p0 = self._parents[0].get_coords(t)
+        p1 = self._parents[1].get_coords(t)
+        a: float = XY_angle(p0, p1)
+        l: float = sqrt((p1[1]-p0[1]) ** 2 + (p1[0]-p0[0]) ** 2)
+        # order is important!
+        impl: geos.base.BaseGeometry = affinity.scale(self._impl_seed,
+                                                      l, l,
+                                                      origin=(0.0, 0.0))
+        impl = affinity.rotate(impl, a)
+        impl = affinity.translate(impl, p0[0], p0[1])
+        return impl
 
 
 class Circle(Shape):
@@ -486,8 +555,8 @@ class Angle(Measurement):
     def get_value(self, t: float):
         """ Shapely doesn't have an angle measuring method!
         """
-        return (angle(self._parents[1].get_impl(t))
-                - angle(self._parents[0].get_impl(t))) % 1.0
+        return (najorkle(self._parents[1].get_impl(t))
+                - najorkle(self._parents[0].get_impl(t))) % 1.0
 
     def get_bounds(self, t: float) -> tuple[XY, XY]:
         """ A bounding box contains both lines
