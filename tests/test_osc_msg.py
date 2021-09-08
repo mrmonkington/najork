@@ -48,6 +48,8 @@ def test_engine_static_messages(s, e, osccount):
     time.sleep(RUNTIME)
     e.pause()
     # 1 second at 24fps
-    # we might needs to +- 1 this on a loaded system?
-    assert osccount["count"] == approx(1.0/CV_FRAME_TIME)
+    # this does occasionally fail due to stop/start delays on a loaded system
+    # adding a frame, which is acceptable I think, so
+    # we loosen the test slighly to +- 1 frame
+    assert osccount["count"] == approx(1.0/CV_FRAME_TIME, abs=1)
 
