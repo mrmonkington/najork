@@ -15,4 +15,10 @@ debug:
 test:
 	PYTHONPATH=.:${PYTHONPATH} python -m pytest tests/ --cov=najork
 
+trace:
+	PYTHONPATH=.:${PYTHONPATH} python -m pytest tests/ --cov=najork --trace
+
+pdb:
+	PYTHONPATH=.:${PYTHONPATH} python -m pytest tests/ --cov=najork --pdb
+
 .PHONY: flatpak-build flatpak-debug debug test
