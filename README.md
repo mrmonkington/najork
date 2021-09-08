@@ -15,10 +15,10 @@ Najork does not create sound, it is a note and parameter source for a sound prod
 ## Project status
 
   - Models [90%]
-  - Read file [50%]
+  - Read file [70%]
   - Write file
-  - Run engine [70%]
-  - Render
+  - Run engine [80%]
+  - Render [15%]
   - Edit
 
 ## Design
@@ -29,7 +29,7 @@ The interface will eventually look something like this:
 
 ## Hacking
 
-Najork is written in python and uses GTK4, Shapely (Python GEOS bindings), python-osc and not much else.
+Najork is written in python and uses GTK4, Shapely (Python GEOS bindings), oscpy and not much else.
 
 
 Install dependencies
