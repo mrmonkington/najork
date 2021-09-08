@@ -29,7 +29,7 @@ The interface will eventually look something like this:
 
 ## Hacking
 
-Najork is written in python and uses GTK4, Shapely (Python GEOS bindings), python-osc and not much else.
+Najork is written in python and uses GTK4, Shapely (Python GEOS bindings), oscpy and not much else.
 
 
 Install dependencies
