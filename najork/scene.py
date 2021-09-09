@@ -18,7 +18,7 @@ any re-entrancy concerns.
 
 from .entities import (
     Entity, Anchor, Line, Slider, Circle, Intersection,
-    Distance, Angle, Control, Bumper
+    Distance, Angle, Control, Bumper, PolyLine
 )
 
 from collections import defaultdict
@@ -114,7 +114,7 @@ class Scene():
         x intersection
         x line
         x anchor
-        polyline
+        x polyline
         x control
         roller
         """
@@ -129,6 +129,14 @@ class Scene():
                     p1 = self.get_by_id(e["parents"][0])
                     p2 = self.get_by_id(e["parents"][1])
                     entity = Line(e["id"], rank["rank"], [p1, p2])
+
+                    # TODO default_child_velocity
+
+                elif e["entity"] == "polyline":
+                    p1 = self.get_by_id(e["parents"][0])
+                    p2 = self.get_by_id(e["parents"][1])
+                    midpoints = e.get("midpoints", [])
+                    entity = PolyLine(e["id"], rank["rank"], [p1, p2], midpoints)
 
                     # TODO default_child_velocity
 

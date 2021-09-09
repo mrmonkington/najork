@@ -5,7 +5,7 @@ import math
 from .scene import Scene
 from .entities import (
     Entity, Anchor, Line, Slider, Circle, Intersection,
-    Distance, Angle, Control, Bumper
+    Distance, Angle, Control, Bumper, PolyLine
 )
 
 from .engine_sched import CV_FRAME_TIME
@@ -18,8 +18,10 @@ THEME = {
     Slider: (1.0, 232/255, 17/255),
     Circle: (233/255, 45/255, 0.0),
     Line: (233/255, 45/255, 0.0),
+    PolyLine: (233/255, 45/255, 0.0),
     Control: (1.0, 127/255, 42/255),
     Distance: (15/255, 171/255, 0.0),
+    Intersection: (15/255, 171/255, 0.0),
     Bumper: (17/255, 162/255, 1.0),
 }
 
@@ -30,6 +32,10 @@ def render(scn: Scene, t: float, ctx):
     for e in scn.sort_by_rank():
         render_entity(e, t, ctx)
 
+def label(ctx, e, x, y):
+    ctx.move_to(x, y)
+    ctx.show_text(e.uid)
+
 def render_entity(e, t: float, ctx):
     """ Build a scene from dict `scene_def` parsed from YAML
     (order something else, we don't care)
@@ -38,10 +44,10 @@ def render_entity(e, t: float, ctx):
     x distance
     x bumper
     x slider
-    intersection
+    x intersection
     x line
     x anchor
-    polyline
+    x polyline
     x control
     roller
     """
@@ -54,6 +60,7 @@ def render_entity(e, t: float, ctx):
         ctx.arc(x, y, POINT_SIZE, 0, 2 * math.pi)
         ctx.close_path()
         ctx.fill()
+        label(ctx, e, x + 20, y + 20)
 
     elif type(e) is Slider:
         ctx.set_source_rgb(*THEME[type(e)])
@@ -63,6 +70,19 @@ def render_entity(e, t: float, ctx):
         ctx.arc(x, y, POINT_SIZE, 0, 2 * math.pi)
         ctx.close_path()
         ctx.fill()
+        label(ctx, e, x + 20, y + 20)
+
+    elif type(e) is Intersection:
+        ctx.set_source_rgb(*THEME[type(e)])
+        ctx.set_line_width(4.0)
+        x, y = e.get_repr(t)
+        ctx.move_to(x-POINT_SIZE, y-POINT_SIZE)
+        ctx.line_to(x+POINT_SIZE, y+POINT_SIZE)
+        ctx.stroke()
+        ctx.move_to(x-POINT_SIZE, y+POINT_SIZE)
+        ctx.line_to(x+POINT_SIZE, y-POINT_SIZE)
+        ctx.stroke()
+        label(ctx, e, x + 20, y)
 
     elif type(e) is Control:
         ctx.set_source_rgb(*THEME[type(e)])
@@ -77,6 +97,7 @@ def render_entity(e, t: float, ctx):
             ctx.line_to(stop[0], stop[1])
         ctx.close_path()
         ctx.stroke()
+        label(ctx, e, x + 20, y + 20)
 
         for inp in inps:
             ctx.move_to(x, y)
@@ -112,14 +133,18 @@ def render_entity(e, t: float, ctx):
             ctx.stroke()
             ctx.set_dash(())
 
+        label(ctx, e, x + 20, y + 20)
+
     elif type(e) is Circle:
         ctx.set_source_rgb(*THEME[type(e)])
         ctx.set_line_width(2.0)
         x, y, r = e.get_repr(t)
-        #ctx.move_to(x, y)
+        ctx.move_to(x + r, y)
         ctx.arc(x, y, r, 0, 2 * math.pi)
         ctx.close_path()
         ctx.stroke()
+
+        label(ctx, e, x + r + 20, y + 20)
 
     elif type(e) is Line:
         ctx.set_source_rgb(*THEME[type(e)])
@@ -128,6 +153,21 @@ def render_entity(e, t: float, ctx):
         ctx.move_to(x1, y1)
         ctx.line_to(x2, y2)
         ctx.stroke()
+
+        label(ctx, e, (x1 + x2) / 2 + 20, (y1 + y2) / 2 + 20)
+
+    elif type(e) is PolyLine:
+        ctx.set_source_rgb(*THEME[type(e)])
+        ctx.set_line_width(2.0)
+        coords = e.get_repr(t)
+        x1, y1 = coords[0]
+        x2, y2 = coords[-1]
+        ctx.move_to(x1, y1)
+        for c in coords[1:]:
+            ctx.line_to(c[0], c[1])
+        ctx.stroke()
+
+        label(ctx, e, (x1 + x2) / 2 + 20, (y1 + y2) / 2 + 20)
 
     elif type(e) is Distance:
         ctx.set_source_rgb(*THEME[type(e)])
@@ -146,6 +186,8 @@ def render_entity(e, t: float, ctx):
             ctx.line_to(stop[0], stop[1])
         ctx.close_path()
         ctx.fill()
+
+        label(ctx, e, xm + 20, ym + 20)
 
     else:
         pass

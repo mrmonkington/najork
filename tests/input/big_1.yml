@@ -31,7 +31,7 @@ layers:
         coords: [650, 950]
       - entity: anchor
         id: p8
-        coords: [1400, 850]
+        coords: [1450, 850]
   - rank: 2
     children:
       - entity: circle
@@ -60,6 +60,20 @@ layers:
         parents:
           - p1
           - p2
+      - entity: polyline
+        id: pl1
+        parents:
+          - p7
+          - p8
+        midpoints:              # in coord space where p7-p8 is X-axis
+          - [0.1, -0.1]
+          - [0.2, 0.02]
+          - [0.3, -0.05]
+          - [0.4, 0.05]
+          - [0.55, -0.2]
+          - [0.7, 0.05]
+          - [0.8, -0.05]
+          - [0.9, 0.1]
   - rank: 3
     children:
       - entity: slider
@@ -97,6 +111,11 @@ layers:
         parents:
           - c1
           - l4
+      - entity: intersection
+        id: i3
+        parents:
+          - l5
+          - pl1
   - rank: 6
     children:
       - entity: distance
@@ -109,6 +128,11 @@ layers:
         parents:                          # specified clockwise
           - l4
           - l3
+      - entity: distance
+        id: dist3
+        parents:
+          - i3
+          - p12
   - rank: 7
     children:
 #      - entity: control                     # msg sent at global clock rate (configure this?)

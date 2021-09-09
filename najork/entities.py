@@ -30,6 +30,8 @@ from shapely import affinity
 from .osc import TemplatedMessage
 from math import atan2, degrees, pi as PI, sqrt
 
+import logging
+
 XY = tuple[float, float]
 
 # pixels
@@ -450,7 +452,8 @@ class PolyLine(Shape):
     def get_repr(self, t: float):
         """ Returns a shape to be rendered by view
         """
-        return self._parents[0].get_coords(t) + self._parents[1].get_coords(t)
+        # return self._parents[0].get_coords(t) + self._parents[1].get_coords(t)
+        return self.get_impl(t).coords
 
     def get_impl(self, t: float):
         """ Return a shapely linestring by transforming the seed
@@ -461,12 +464,13 @@ class PolyLine(Shape):
         p0 = self._parents[0].get_coords(t)
         p1 = self._parents[1].get_coords(t)
         a: float = XY_angle(p0, p1)
+        logging.debug(a)
         l: float = sqrt((p1[1]-p0[1]) ** 2 + (p1[0]-p0[0]) ** 2)
         # order is important!
         impl: geos.base.BaseGeometry = affinity.scale(self._impl_seed,
                                                       l, l,
                                                       origin=(0.0, 0.0))
-        impl = affinity.rotate(impl, a)
+        impl = affinity.rotate(impl, a, use_radians=True, origin=(0.0, 0.0))
         impl = affinity.translate(impl, p0[0], p0[1])
         return impl
 
