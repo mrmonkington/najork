@@ -33,6 +33,7 @@ class NajorkWindow(Gtk.ApplicationWindow):
     main_canvas = Gtk.Template.Child('main_canvas')
     play_button = Gtk.Template.Child('play_button')
     rewind_button = Gtk.Template.Child('rewind_button')
+    current_time = Gtk.Template.Child('current_time')
 
     def __init__(self, engine, **kwargs):
         super().__init__(**kwargs)
@@ -46,7 +47,9 @@ class NajorkWindow(Gtk.ApplicationWindow):
         #print("tick %i" % (frame_clock.get_frame_time(),))
         #self.testDraw(widg, frame_clock)
         if self.engine.running:
+            self.current_time.set_value(self.engine.pos)
             widg.queue_draw()
+            #self.current_time.update()
         return GLib.SOURCE_CONTINUE
 
     def draw_scene(self, da, ctx, width, height, *args):
