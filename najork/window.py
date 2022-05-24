@@ -35,11 +35,12 @@ class NajorkWindow(Gtk.ApplicationWindow):
     rewind_button = Gtk.Template.Child('rewind_button')
     current_time = Gtk.Template.Child('current_time')
 
-    def __init__(self, engine, **kwargs):
+    def __init__(self, engine: Engine, view: SceneView, **kwargs):
         super().__init__(**kwargs)
         self.engine = engine
+        self.view: SceneView = 
         self.main_canvas.add_tick_callback(self.tick)
-        self.main_canvas.set_draw_func(self.draw_scene, {}, None)
+        self.main_canvas.set_draw_func(self.view.draw_scene, {}, None)
         self.play_button.connect("clicked", self.on_playpause)
         self.rewind_button.connect("clicked", self.on_rewind)
 
@@ -52,7 +53,7 @@ class NajorkWindow(Gtk.ApplicationWindow):
             #self.current_time.update()
         return GLib.SOURCE_CONTINUE
 
-    def draw_scene(self, da, ctx, width, height, *args):
+    def draw_scene(self, da, ctx, width: int, height: int, *args):
         logging.debug("Width %i, height %i", width, height)
         # TODO get scene bounds
         da.set_content_width(1920)
