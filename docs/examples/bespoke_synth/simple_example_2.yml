@@ -1,0 +1,114 @@
+---
+# each layer can encode objects which have dependencies
+# on lower ranked layers only
+measure-duration: 1.0         # 1s = 1 bar at 120bpm (though we don't *do* bpm)
+layers:
+  - rank: 1                   # all static anchors should live here
+    children:
+      - entity: anchor           # for circle origin
+        id: anchor1
+        coords: [400, 500]    # TL = [0,0]
+      - entity: anchor
+        id: anchor2
+        coords: [1200, 500]
+
+      - entity: anchor           # for circle origin
+        id: anchor3
+        coords: [1080, 350]    # TL = [0,0]
+      - entity: anchor
+        id: anchor4
+        coords: [1800, 300]
+      - entity: anchor           # for circle origin
+        id: anchor5
+        coords: [1450, 150]    # TL = [0,0]
+      - entity: anchor
+        id: anchor6
+        coords: [1450, 450]
+
+  - rank: 2
+    children:
+      - entity: circle
+        id: circle1
+        centre: anchor1            # origin - could we set this to another anchor?
+        radius: 150
+        orientation: 0        # rotation about origin, in order to define zero anchor for line
+
+      - entity: line
+        id: line3
+        parents:
+          - anchor3
+          - anchor4
+      - entity: line
+        id: line4
+        parents:
+          - anchor5
+          - anchor6
+
+
+  - rank: 3
+    children:
+      - entity: slider        # subclasses anchor
+        id: slider1
+        parent: circle1
+        progression: 0.3      # around circle, anti clockwise, as fraction of circumference
+        velocity: 0.4         # expressed in parent length (e.g. circumference) per measure, anticlockwise)
+        loop: true
+
+      - entity: bumper
+        id: bip1
+        parent: line3
+        path: "/note"
+        data:
+          - "62.0"
+          - "10.0"
+        progression: 0.3
+        velocity: 1.21
+        loop: True
+        collides: line4
+      - entity: bumper
+        id: bip2
+        parent: line3
+        path: "/note"
+        data:
+          - "68.0"
+          - "20.0"
+        progression: 0.6
+        velocity: 1.19
+        loop: True
+        collides: line4
+      - entity: bumper
+        id: bip3
+        parent: line3
+        path: "/note"
+        data:
+          - "78.0"
+          - "30.0"
+        progression: 0.7
+        velocity: 1.2
+        loop: True
+        collides: line4
+
+  - rank: 4
+    children:
+      - entity: line
+        id: line1
+        parents:
+          - slider1
+          - anchor2
+  - rank: 5
+    children:
+      - entity: distance
+        id: dist1
+        parents:
+          - slider1
+          - anchor2
+  - rank: 6
+    children:
+      - entity: control
+        id: control1
+        path: "/bespoke/control/oscillator~fmax"
+        data:
+          - "in_1 / 2"
+        connections:
+          in_1: dist1
+        coords: [750, 200]

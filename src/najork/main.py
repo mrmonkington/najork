@@ -29,11 +29,11 @@ from .window import NajorkWindow
 from .scene import Scene
 from .engine_sched import Engine
 
-from najork.config import DEFAULT_SETTINGS
+from najork.config import settings
 
 #logging.basicConfig(level=logging.DEBUG)
 
-RENDER_FRAME_TIME = 1.0 / 24.0 # let's do PAL for now
+RENDER_FRAME_TIME = 1.0 / settings["clock_rate"] # let's do PAL for now
 
 class Application(Gtk.Application):
     def __init__(self):
@@ -42,7 +42,7 @@ class Application(Gtk.Application):
         self.connect("shutdown", self.on_quit)
         self.connect("open", self.app_open)
         self.scene = Scene()
-        self.engine = Engine(self.scene, DEFAULT_SETTINGS)
+        self.engine = Engine(self.scene, settings)
         self.window = None
         self.add_main_option(
             "debug",
@@ -105,7 +105,7 @@ class Application(Gtk.Application):
         scene_def: dict = yaml.load(content, Loader=yaml.Loader)
         self.scene = Scene()
         self.scene.load_from_dict(scene_def)
-        self.engine = Engine(self.scene, DEFAULT_SETTINGS)
+        self.engine = Engine(self.scene, settings)
         self.window.engine = self.engine
         if has_option("-s", "--start"):
             logging.debug("starting")

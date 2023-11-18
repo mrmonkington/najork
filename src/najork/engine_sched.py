@@ -16,10 +16,12 @@ import time
 import logging
 
 from .scene import Scene
+from .config import settings
 
 from oscpy.client import OSCClient
 
-CV_FRAME_TIME = 1.0 / 24.0  # let's do PAL for now
+
+CV_FRAME_TIME = 1.0 / settings["clock_rate"]
 
 class Engine:
 

@@ -34,16 +34,29 @@ Najork is written in python and uses GTK4, Shapely (Python GEOS bindings), oscpy
 
 Install dependencies
 
- - `pipenv`
+ - `python >= 3.11`
  - `(lib)gtk4-dev(el) >= 3.9`
  - `(lib)geos-dev(el) >= 3.3`
+
+Install and activate a virtualenv
+
+```
+python -mvenv .venv
+. venv/bin/activate
+```
+
+(Or use [https://direnv.net/](direnv) with layout python)
 
 From project root:
 
 ```
-pipenv install --dev
-pipenv run make test
-pipenv run make debug
+pip install -r dev-dependencies
+pip install -e .
+
+# run tests
+make test
+
+bin/najork-debug
 ```
 
 ### Packaging (WIP)

@@ -26,7 +26,7 @@ import logging
 
 from .renderer import render
 
-@Gtk.Template(filename='najork/window.ui')
+@Gtk.Template(filename='src/najork/window.ui')
 class NajorkWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'NajorkWindow'
 
